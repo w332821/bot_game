@@ -1,49 +1,46 @@
 #!/bin/bash
-# PM2启动脚本 - 用于服务器后台运行
+# PM2启动脚本 - 简化版，直接使用Python完整路径
 
-# 切换到项目目录
+# 项目目录
 PROJECT_DIR="/root/bot_game/bot_game"
 cd "$PROJECT_DIR"
 
-# 将项目根目录添加到PYTHONPATH（解决模块导入问题）
+# 设置PYTHONPATH
 export PYTHONPATH="$PROJECT_DIR:$PYTHONPATH"
 
-# 查找并加载conda（支持多种安装路径）
-CONDA_PATHS=(
-    "/opt/anaconda3/etc/profile.d/conda.sh"
-    "$HOME/anaconda3/etc/profile.d/conda.sh"
-    "/root/anaconda3/etc/profile.d/conda.sh"
-    "/usr/local/anaconda3/etc/profile.d/conda.sh"
-    "$(dirname $(dirname $(which conda 2>/dev/null) 2>/dev/null) 2>/dev/null)/etc/profile.d/conda.sh"
+# 直接使用conda环境中的Python完整路径（不需要conda activate）
+# 根据实际情况修改路径
+PYTHON_PATHS=(
+    "/root/miniconda3/envs/bot_game/bin/python"
+    "/root/anaconda3/envs/bot_game/bin/python"
+    "/opt/anaconda3/envs/bot_game/bin/python"
 )
 
-CONDA_FOUND=false
-for conda_path in "${CONDA_PATHS[@]}"; do
-    if [ -f "$conda_path" ]; then
-        source "$conda_path"
-        CONDA_FOUND=true
-        echo "✓ 找到conda: $conda_path"
+# 查找可用的Python
+PYTHON_BIN=""
+for python_path in "${PYTHON_PATHS[@]}"; do
+    if [ -f "$python_path" ]; then
+        PYTHON_BIN="$python_path"
+        echo "✓ 找到Python: $PYTHON_BIN"
         break
     fi
 done
 
-if [ "$CONDA_FOUND" = false ]; then
-    echo "❌ 错误: 找不到conda"
-    echo "尝试查找的路径:"
-    printf '%s\n' "${CONDA_PATHS[@]}"
+if [ -z "$PYTHON_BIN" ]; then
+    echo "❌ 错误: 找不到Python解释器"
+    echo "尝试的路径:"
+    printf '%s\n' "${PYTHON_PATHS[@]}"
     echo ""
-    echo "请运行: which conda"
+    echo "请运行: conda activate bot_game && which python"
     exit 1
 fi
 
-# 激活conda环境
-echo "激活conda环境: bot_game"
-conda activate bot_game
-
-# 检查Python和项目目录
-echo "Python路径: $(which python)"
+# 显示配置
 echo "项目目录: $PROJECT_DIR"
+echo "Python版本: $($PYTHON_BIN --version)"
 echo "PYTHONPATH: $PYTHONPATH"
+echo ""
+echo "启动应用..."
 
-# 启动应用（使用 -m 模块方式运行，确保导入路径正确）
-python -m biz.application
+# 启动应用
+$PYTHON_BIN -m biz.application
