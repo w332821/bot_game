@@ -1,0 +1,41 @@
+# Web框架
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+starlette==0.27.0
+
+# 数据库
+sqlmodel==0.0.14
+sqlalchemy==2.0.23
+asyncmy==0.2.9
+PyMySQL==1.1.0
+greenlet==3.0.1
+
+# 依赖注入
+dependency-injector>=4.42.0
+
+# 工具库
+PyYAML==6.0.1
+pydantic==2.5.0
+uuid6==2023.5.2
+python-dotenv==1.0.0
+
+# HTTP客户端
+httpx==0.25.2
+aiohttp==3.9.1
+requests==2.31.0
+
+# 图片处理
+Pillow==10.1.0
+
+# 定时任务
+APScheduler==3.10.4
+
+# 加密
+bcrypt==4.1.2
+PyJWT==2.8.0
+python-multipart==0.0.6
+
+# 其他
+sse-starlette==1.8.2
+beautifulsoup4==4.12.2
+lxml==4.9.3

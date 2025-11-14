@@ -1,0 +1,18 @@
+# 测试依赖
+# 包含所有生产依赖和额外的测试工具
+
+# 生产依赖
+-r requirements.txt
+
+# 测试框架
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+
+# HTTP测试
+aioresponses==0.7.6
+
+# 工具
+faker==20.1.0
+freezegun==1.4.0

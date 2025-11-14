@@ -1,0 +1,8 @@
+db:
+  # 数据库连接配置
+  # 异步连接 URI (用于异步操作)
+  database_uri: "mysql+asyncmy://username:password@localhost:3306/database_name"
+  # 同步连接 URI (用于数据库初始化)
+  sync_database_uri: "mysql+pymysql://username:password@localhost:3306/database_name"
+  # 是否打印 SQL 语句（开发环境可设为 True）
+  echo: False
