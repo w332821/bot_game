@@ -152,10 +152,18 @@ async def root():
 
 
 if __name__ == '__main__':
-    # 开发环境使用 reload，生产环境使用 workers
+    import sys
+    # 确保项目根目录在 sys.path 中
+    import os
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
+    # 生产环境配置
     uvicorn.run(
         'biz.application:app',
         host='0.0.0.0',
         port=3003,  # 使用3003端口，与Node.js版本保持一致
-        reload=True  # 生产环境改为 False，并设置 workers=2
+        reload=False,  # 生产环境关闭热重载
+        workers=1  # 单worker，避免调度器重复
     )
