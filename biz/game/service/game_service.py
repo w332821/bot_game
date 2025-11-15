@@ -446,9 +446,22 @@ class GameService:
             ties = []
 
             for bet in pending_bets:
+                # 解析 bet_details（如果是 JSON 字符串）
+                import json
+                bet_details = bet.get('bet_details')
+                if bet_details and isinstance(bet_details, str):
+                    try:
+                        bet_details = json.loads(bet_details)
+                    except:
+                        bet_details = None
+
+                # 如果没有 bet_details，使用 bet 本身
+                if not bet_details:
+                    bet_details = bet
+
                 # 计算结果
                 status, payout, profit = game_logic.calculate_result(
-                    bet=bet['bet_details'] or bet,
+                    bet=bet_details,
                     draw_code=draw_code,
                     draw_number=draw_number,
                     special_number=special_number

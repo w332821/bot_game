@@ -15,6 +15,17 @@ class BetRepository:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
         self._session_factory = session_factory
 
+    def _parse_json_fields(self, bet_data: Dict[str, Any]) -> None:
+        """解析投注数据中的 JSON 字段"""
+        import json
+
+        # 解析 bet_details
+        if bet_data.get("bet_details") and isinstance(bet_data["bet_details"], str):
+            try:
+                bet_data["bet_details"] = json.loads(bet_data["bet_details"])
+            except:
+                bet_data["bet_details"] = None
+
     async def create_bet(self, bet_data: Dict[str, Any]) -> Dict[str, Any]:
         """创建投注记录"""
         async with self._session_factory() as session:
@@ -61,7 +72,9 @@ class BetRepository:
             result = await session.execute(query, {"bet_id": bet_id})
             row = result.fetchone()
             if row:
-                return dict(row._mapping)
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                return data
             return None
 
     async def get_user_bets(
@@ -104,7 +117,12 @@ class BetRepository:
 
             result = await session.execute(query, params)
             rows = result.fetchall()
-            return [dict(row._mapping) for row in rows]
+            bets = []
+            for row in rows:
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                bets.append(data)
+            return bets
 
     async def get_chat_bets(
         self,

@@ -15,6 +15,24 @@ class UserRepository:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
         self._session_factory = session_factory
 
+    def _parse_json_fields(self, user_data: Dict[str, Any]) -> None:
+        """解析用户数据中的 JSON 字段"""
+        import json
+
+        # 解析 bot_config
+        if user_data.get("bot_config") and isinstance(user_data["bot_config"], str):
+            try:
+                user_data["bot_config"] = json.loads(user_data["bot_config"])
+            except:
+                user_data["bot_config"] = {}
+
+        # 解析 red_packet_settings
+        if user_data.get("red_packet_settings") and isinstance(user_data["red_packet_settings"], str):
+            try:
+                user_data["red_packet_settings"] = json.loads(user_data["red_packet_settings"])
+            except:
+                user_data["red_packet_settings"] = {}
+
     async def get_user_in_chat(self, user_id: str, chat_id: str) -> Optional[Dict[str, Any]]:
         """获取用户在特定群的数据"""
         async with self._session_factory() as session:
@@ -25,7 +43,9 @@ class UserRepository:
             result = await session.execute(query, {"user_id": user_id, "chat_id": chat_id})
             row = result.fetchone()
             if row:
-                return dict(row._mapping)
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                return data
             return None
 
     async def get_user_first(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -39,7 +59,9 @@ class UserRepository:
             result = await session.execute(query, {"user_id": user_id})
             row = result.fetchone()
             if row:
-                return dict(row._mapping)
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                return data
             return None
 
     async def get_all_user_chats(self, user_id: str) -> List[Dict[str, Any]]:
@@ -52,7 +74,12 @@ class UserRepository:
             """)
             result = await session.execute(query, {"user_id": user_id})
             rows = result.fetchall()
-            return [dict(row._mapping) for row in rows]
+            users = []
+            for row in rows:
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                users.append(data)
+            return users
 
     async def get_chat_users(self, chat_id: str, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """获取特定群的所有用户"""
@@ -65,7 +92,12 @@ class UserRepository:
             """)
             result = await session.execute(query, {"chat_id": chat_id, "skip": skip, "limit": limit})
             rows = result.fetchall()
-            return [dict(row._mapping) for row in rows]
+            users = []
+            for row in rows:
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                users.append(data)
+            return users
 
     async def count_chat_users(self, chat_id: str) -> int:
         """统计群聊用户数"""
@@ -328,4 +360,9 @@ class UserRepository:
                 result = await session.execute(query)
 
             rows = result.fetchall()
-            return [dict(row._mapping) for row in rows]
+            users = []
+            for row in rows:
+                data = dict(row._mapping)
+                self._parse_json_fields(data)
+                users.append(data)
+            return users
