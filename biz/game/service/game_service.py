@@ -140,13 +140,16 @@ class GameService:
                 return
 
             # 扣除余额
-            new_balance = await self.user_repo.subtract_balance(sender_id, chat_id, total_amount)
-            if new_balance is None:
+            updated_user = await self.user_repo.subtract_balance(sender_id, chat_id, total_amount)
+            if updated_user is None:
                 await self.bot_client.send_message(
                     chat_id,
                     f"@{sender_name} ❌ 下注失败: 余额扣除失败"
                 )
                 return
+
+            # 获取新余额
+            new_balance = updated_user['balance']
 
             # 获取当前期号
             current_issue = await self._generate_issue_number(game_type)
@@ -170,8 +173,8 @@ class GameService:
             # 生成确认消息
             response = f"📝 下注成功！\n\n"
             response += game_logic.format_bet_summary(valid_bets)
-            response += f"\n\n总金额: {total_amount:.2f}元"
-            response += f"\n余额: {new_balance:.2f}"
+            response += f"\n\n总金额: {float(total_amount):.2f}元"
+            response += f"\n余额: {float(new_balance):.2f}"
             response += f"\n期号: {current_issue}"
 
             await self.bot_client.send_message(chat_id, response)

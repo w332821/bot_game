@@ -110,6 +110,7 @@ CREATE TABLE `bets` (
   `result` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending' COMMENT '结果：pending、win、loss、tie',
   `pnl` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '盈亏金额（正数为赢，负数为输）',
   `issue` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '期号',
+  `bet_details` text COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '投注详情JSON（包含完整的下注信息）',
   `draw_number` int DEFAULT NULL COMMENT '开奖号码（番数）',
   `draw_code` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '开奖号码串（如"3,15,7,19,12,8,4,20"）',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

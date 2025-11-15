@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Text
 
 
 class BetTable(SQLModel, table=True):
@@ -25,6 +26,7 @@ class BetTable(SQLModel, table=True):
     result: str = Field(default="pending", description="结果：pending/win/lose/tie")
     pnl: Decimal = Field(default=Decimal("0.00"), description="盈亏金额", max_digits=15, decimal_places=2)
     issue: Optional[str] = Field(None, description="期号", index=True)
+    bet_details: Optional[str] = Field(None, description="投注详情JSON（包含完整的下注信息）", sa_column_kwargs={"type_": Text})
     draw_number: Optional[int] = Field(None, description="开奖号码")
     draw_code: Optional[str] = Field(None, description="开奖号码串")
     created_at: datetime = Field(default_factory=datetime.now, index=True)
