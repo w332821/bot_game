@@ -14,7 +14,7 @@ class BetTable(SQLModel, table=True):
 
     id: str = Field(primary_key=True, description="投注ID")
     user_id: str = Field(..., description="用户ID", index=True)
-    username: str = Field(..., description="用户名")
+    username: Optional[str] = Field(None, description="用户名")
     chat_id: str = Field(..., description="群聊ID", index=True)
     game_type: str = Field(default="lucky8", description="游戏类型：lucky8/liuhecai")
     lottery_type: str = Field(..., description="投注类型：fan/zheng/nian/jiao/tong/tema等")

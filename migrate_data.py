@@ -19,16 +19,17 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from sqlmodel import Session, create_engine, select
+from sqlalchemy import text
 from dotenv import load_dotenv
 
 # 加载环境变量
 load_dotenv()
 
 # 导入模型
-from biz.user.models.model import User
-from biz.chat.models.model import Chat
-from biz.game.models.model import Bet
-from base.database import get_sync_engine
+from biz.user.models.db_model import UserTable
+from biz.chat.models.db_model import ChatTable
+from biz.bet.models.db_model import BetTable
+from base.init_db import get_mysql_sync_engine, get_database_uri_from_config
 
 
 def load_json_data(json_file: str) -> dict:
@@ -59,7 +60,7 @@ def migrate_chats(session: Session, data: dict):
     for chat_id, chat_info in chats_data.items():
         # 检查是否已存在
         existing = session.exec(
-            select(Chat).where(Chat.id == chat_id)
+            select(ChatTable).where(ChatTable.id == chat_id)
         ).first()
 
         if existing:
@@ -67,7 +68,7 @@ def migrate_chats(session: Session, data: dict):
             continue
 
         # 创建新群聊记录
-        chat = Chat(
+        chat = ChatTable(
             id=chat_id,
             name=chat_info.get('name', 'Unknown'),
             game_type=chat_info.get('gameType', 'lucky8'),
@@ -83,7 +84,7 @@ def migrate_chats(session: Session, data: dict):
 
 
 def migrate_users(session: Session, data: dict):
-    """迁移用户数据"""
+    """迁移用户数据 - 使用原生SQL避免ORM字段映射问题"""
     print("\n👥 开始迁移用户数据...")
 
     users_data = data.get('users', {})
@@ -100,31 +101,30 @@ def migrate_users(session: Session, data: dict):
             print(f"  ⚠️  跳过无效用户数据: {user_key}")
             continue
 
-        # 检查是否已存在
-        existing = session.exec(
-            select(User).where(User.id == user_id, User.chat_id == chat_id)
-        ).first()
+        try:
+            # 使用原生SQL插入，ON DUPLICATE KEY UPDATE处理重复
+            sql = text("""
+            INSERT INTO users (id, username, chat_id, balance, rebate_ratio, join_date, status, `role`, created_by)
+            VALUES (:id, :username, :chat_id, :balance, :rebate_ratio, NOW(), '活跃', 'normal', 'admin')
+            ON DUPLICATE KEY UPDATE balance=:balance
+            """)
 
-        if existing:
-            # 更新余额
-            existing.balance = float(user_info.get('balance', 1000))
-            print(f"  🔄 更新用户: {user_info.get('username')} (余额: {existing.balance})")
-        else:
-            # 创建新用户
-            user = User(
-                id=user_id,
-                name=user_info.get('username', 'Unknown'),
-                chat_id=chat_id,
-                balance=float(user_info.get('balance', 1000)),
-                rebate_ratio=float(user_info.get('rebateRatio', 0.02))
-            )
+            session.execute(sql, {
+                'id': user_id,
+                'username': user_info.get('username', 'Unknown'),
+                'chat_id': chat_id,
+                'balance': float(user_info.get('balance', 1000)),
+                'rebate_ratio': float(user_info.get('rebateRatio', 0.02))
+            })
 
-            session.add(user)
             count += 1
-            print(f"  ✓ 迁移用户: {user.name} (余额: {user.balance})")
+            print(f"  ✓ 迁移用户: {user_info.get('username')} (余额: {user_info.get('balance')})")
+
+        except Exception as e:
+            print(f"  ❌ 用户迁移失败: {user_info.get('username')} - {str(e)}")
 
     session.commit()
-    print(f"✅ 用户迁移完成，共迁移 {count} 个新用户")
+    print(f"✅ 用户迁移完成，共迁移 {count} 个用户")
 
 
 def migrate_bets(session: Session, data: dict):
@@ -136,38 +136,72 @@ def migrate_bets(session: Session, data: dict):
         print("⚠️  没有找到投注数据")
         return
 
+    # 构建用户ID到用户名的映射
+    users_data = data.get('users', {})
+    user_id_to_name = {}
+    for user_key, user_info in users_data.items():
+        user_id = user_info.get('id')
+        if user_id:
+            user_id_to_name[user_id] = user_info.get('username', 'Unknown')
+
     count = 0
+    skipped = 0
     for bet_info in bets_data:
         user_id = bet_info.get('userId')
         chat_id = bet_info.get('chatId')
 
         if not user_id or not chat_id:
+            skipped += 1
             continue
 
-        # 创建投注记录
-        bet = Bet(
-            user_id=user_id,
-            chat_id=chat_id,
-            lottery_type=bet_info.get('lotteryType', 'unknown'),
-            bet_number=str(bet_info.get('betNumber', '')),
-            bet_amount=float(bet_info.get('betAmount', 0)),
-            odds=float(bet_info.get('odds', 0)),
-            status=bet_info.get('status', 'pending'),
-            result=bet_info.get('result'),
-            pnl=float(bet_info.get('pnl', 0)) if bet_info.get('pnl') else None,
-            draw_number=bet_info.get('drawNumber'),
-            draw_code=bet_info.get('drawCode'),
-            issue=bet_info.get('issue')
-        )
+        # 获取用户名
+        username = user_id_to_name.get(user_id, 'Unknown')
 
-        session.add(bet)
-        count += 1
+        try:
+            # 生成投注ID（使用UUID）
+            import uuid
+            bet_id = bet_info.get('id', str(uuid.uuid4()))
 
-        if count % 100 == 0:
-            print(f"  📊 已迁移 {count} 条投注记录...")
+            # 使用原生SQL插入投注记录
+            sql = text("""
+            INSERT INTO bets (id, user_id, username, chat_id, game_type, lottery_type,
+                            bet_number, bet_amount, odds, status, result, pnl,
+                            issue, draw_number, draw_code, created_at)
+            VALUES (:id, :user_id, :username, :chat_id, :game_type, :lottery_type,
+                    :bet_number, :bet_amount, :odds, :status, :result, :pnl,
+                    :issue, :draw_number, :draw_code, NOW())
+            ON DUPLICATE KEY UPDATE id=id
+            """)
+
+            session.execute(sql, {
+                'id': bet_id,
+                'user_id': user_id,
+                'username': username,
+                'chat_id': chat_id,
+                'game_type': bet_info.get('gameType', 'lucky8'),
+                'lottery_type': bet_info.get('lotteryType', 'unknown'),
+                'bet_number': bet_info.get('betNumber'),
+                'bet_amount': float(bet_info.get('betAmount', 0)),
+                'odds': float(bet_info.get('odds', 0)),
+                'status': bet_info.get('status', 'active'),
+                'result': bet_info.get('result', 'pending'),
+                'pnl': float(bet_info.get('pnl', 0)) if bet_info.get('pnl') else 0,
+                'issue': bet_info.get('issue'),
+                'draw_number': bet_info.get('drawNumber'),
+                'draw_code': bet_info.get('drawCode')
+            })
+
+            count += 1
+
+            if count % 100 == 0:
+                print(f"  📊 已迁移 {count} 条投注记录...")
+
+        except Exception as e:
+            print(f"  ❌ 投注迁移失败: {str(e)}")
+            skipped += 1
 
     session.commit()
-    print(f"✅ 投注迁移完成，共迁移 {count} 条记录")
+    print(f"✅ 投注迁移完成，共迁移 {count} 条记录，跳过 {skipped} 条")
 
 
 def main():
@@ -199,7 +233,8 @@ def main():
 
     # 2. 连接数据库
     print("\n🔌 连接数据库...")
-    engine = get_sync_engine()
+    db_uri = get_database_uri_from_config()
+    engine = get_mysql_sync_engine(db_uri)
 
     # 3. 开始迁移
     with Session(engine) as session:
