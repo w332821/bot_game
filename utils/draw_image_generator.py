@@ -18,7 +18,19 @@ class DrawImageGenerator:
 
     def __init__(self):
         """初始化生成器"""
-        self.temp_dir = tempfile.gettempdir()
+        # 对应 Node.js: /root/yueliao-server/uploads
+        # Python版本使用环境变量配置，默认为 /root/yueliao-server/uploads
+        self.uploads_dir = os.getenv('UPLOADS_DIR', '/root/yueliao-server/uploads')
+
+        # 确保uploads目录存在
+        if not os.path.exists(self.uploads_dir):
+            try:
+                os.makedirs(self.uploads_dir, exist_ok=True)
+                logger.info(f"✅ 创建uploads目录: {self.uploads_dir}")
+            except Exception as e:
+                logger.warning(f"⚠️ 无法创建uploads目录，使用临时目录: {str(e)}")
+                self.uploads_dir = tempfile.gettempdir()
+
         self.image_width = 800
         self.image_height_per_row = 60
         self.padding = 20
@@ -125,11 +137,12 @@ class DrawImageGenerator:
             y_offset += self.image_height_per_row
 
         # 保存图片
+        # 对应 Node.js: /root/yueliao-server/uploads/draw_{gameType}_{issue}.png
         if not save_path:
-            save_path = os.path.join(
-                self.temp_dir,
-                f"lucky8_draw_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
-            )
+            # 尝试从开奖记录中获取期号
+            issue = draws[0].get('issue', datetime.now().strftime('%Y%m%d%H%M%S')) if draws else 'unknown'
+            filename = f"draw_lucky8_{issue}.png"
+            save_path = os.path.join(self.uploads_dir, filename)
 
         image.save(save_path)
         logger.info(f"✅ 澳洲幸运8图片已生成: {save_path}")
@@ -207,11 +220,12 @@ class DrawImageGenerator:
             y_offset += self.image_height_per_row
 
         # 保存图片
+        # 对应 Node.js: /root/yueliao-server/uploads/draw_{gameType}_{issue}.png
         if not save_path:
-            save_path = os.path.join(
-                self.temp_dir,
-                f"liuhecai_draw_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
-            )
+            # 尝试从开奖记录中获取期号
+            issue = draws[0].get('issue', datetime.now().strftime('%Y%m%d%H%M%S')) if draws else 'unknown'
+            filename = f"draw_liuhecai_{issue}.png"
+            save_path = os.path.join(self.uploads_dir, filename)
 
         image.save(save_path)
         logger.info(f"✅ 六合彩图片已生成: {save_path}")

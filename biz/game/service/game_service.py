@@ -564,14 +564,16 @@ class GameService:
 
                     if image_path:
                         filename = os.path.basename(image_path)
-                        public_url = f"/public/images/{filename}"
+                        # 对应 Node.js: publicUrl = `/uploads/${filename}`
+                        public_url = f"/uploads/{filename}"
 
+                        # 对应 Node.js: buildImageUrl(result.publicUrl)
                         image_host = os.getenv('IMAGE_HOST', 'myrepdemo.top')
                         image_port = os.getenv('IMAGE_PORT', '65035')
                         full_url = f"http://{image_host}:{image_port}{public_url}"
 
                         await self.bot_client.send_image(chat_id, full_url, filename=filename)
-                        logger.info(f"✅ 已发送开奖图片")
+                        logger.info(f"✅ 已发送开奖图片: {full_url}")
             except Exception as e:
                 logger.error(f"⚠️ 发送开奖图片失败: {str(e)}")
 
