@@ -73,7 +73,8 @@ async def lifespan(app: FastAPI):
 
     # 初始化开奖调度器
     game_service = container.game_service()
-    scheduler = init_scheduler(game_service)
+    bot_client = container.bot_api_client()
+    scheduler = init_scheduler(game_service, bot_client)
     logger.info("✅ 开奖调度器已初始化")
 
     yield

@@ -290,6 +290,11 @@ async def handle_message_received(
         await game_service.handle_bet_history(chat_id, sender)
 
     elif content == '取消':
+        # 检查是否锁定
+        scheduler = get_scheduler()
+        if scheduler and scheduler.is_bet_locked(chat_id):
+            await bot_client.send_message(chat_id, f"@{sender_name} 🔒 已停止下注和取消操作，请等待开奖结果")
+            return
         await game_service.handle_cancel_bet(chat_id, sender)
 
     elif content in ['开奖', '立即开奖']:
@@ -318,6 +323,12 @@ async def handle_message_received(
             )
 
             if bets:
+                # 检查是否锁定
+                scheduler = get_scheduler()
+                if scheduler and scheduler.is_bet_locked(chat_id):
+                    await bot_client.send_message(chat_id, f"@{sender_name} 🔒 已停止下注和取消操作，请等待开奖结果")
+                    return
+
                 # 是下注指令
                 await game_service.handle_bet_message(chat_id, message, sender)
             else:
