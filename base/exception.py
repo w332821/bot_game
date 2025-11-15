@@ -1,7 +1,23 @@
 from typing import Any, Optional, Dict
+import json
+from decimal import Decimal
+from datetime import datetime, date
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles Decimal, datetime, and date types"""
+
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # Convert Decimal to float for JSON serialization
+            return float(obj)
+        elif isinstance(obj, (datetime, date)):
+            # Convert datetime/date to ISO format string
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class UnifyException(HTTPException):
@@ -30,18 +46,26 @@ class UnifyException(HTTPException):
 
 
 async def unify_exception_handler(_: Request, exc: UnifyException):
+    content = {
+        'code': exc.exception_biz_code,
+        'message': exc.exception_detail,
+        'data': exc.exception_kwargs
+    }
+    # Use custom encoder for Decimal and datetime types
     return JSONResponse(
         status_code=exc.exception_http_code,
-        content={
-            'code': exc.exception_biz_code,
-            'message': exc.exception_detail,
-            'data': exc.exception_kwargs})
+        content=json.loads(json.dumps(content, cls=DecimalEncoder))
+    )
 
 
 async def http_exception_handler(_: Request, exc: HTTPException):
+    content = {
+        'code': exc.status_code,
+        'message': exc.detail,
+        'data': {}
+    }
+    # Use custom encoder for consistency
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            'code': exc.status_code,
-            'message': exc.detail,
-            'data': {}})
+        content=json.loads(json.dumps(content, cls=DecimalEncoder))
+    )
