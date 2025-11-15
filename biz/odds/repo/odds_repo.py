@@ -47,6 +47,7 @@ class OddsRepository:
         """创建赔率配置"""
         async with self._session_factory() as session:
             import json
+            from base.api import DecimalEncoder
 
             query = text("""
                 INSERT INTO odds_config (
@@ -66,7 +67,7 @@ class OddsRepository:
                 "period_max": odds_data.get("period_max", Decimal("50000.00")),
                 "game_type": odds_data.get("game_type", "lucky8"),
                 "description": odds_data.get("description"),
-                "tema_odds": json.dumps(odds_data.get("tema_odds")) if odds_data.get("tema_odds") else None,
+                "tema_odds": json.dumps(odds_data.get("tema_odds"), cls=DecimalEncoder) if odds_data.get("tema_odds") else None,
                 "status": odds_data.get("status", "active")
             }
 
@@ -87,6 +88,7 @@ class OddsRepository:
 
         async with self._session_factory() as session:
             import json
+            from base.api import DecimalEncoder
 
             # 构建SET子句
             set_parts = []
@@ -94,7 +96,7 @@ class OddsRepository:
 
             for key, value in updates.items():
                 if key == "tema_odds" and isinstance(value, dict):
-                    value = json.dumps(value)
+                    value = json.dumps(value, cls=DecimalEncoder)
                 set_parts.append(f"{key} = :{key}")
                 params[key] = value
 

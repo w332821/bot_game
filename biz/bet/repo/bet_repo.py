@@ -308,6 +308,7 @@ class BetRepository:
         """
         from uuid import uuid4
         import json
+        from base.api import DecimalEncoder
 
         async with self._session_factory() as session:
             bet_id = str(uuid4())
@@ -340,7 +341,7 @@ class BetRepository:
                 "status": "active",
                 "result": bet_data.get("status", "pending"),
                 "issue": bet_data.get("draw_issue"),
-                "bet_details": json.dumps(bet_data.get("bet_details")) if bet_data.get("bet_details") else None
+                "bet_details": json.dumps(bet_data.get("bet_details"), cls=DecimalEncoder) if bet_data.get("bet_details") else None
             }
 
             await session.execute(query, params)

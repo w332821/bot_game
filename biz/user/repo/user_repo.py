@@ -94,6 +94,8 @@ class UserRepository:
             """)
 
             import json
+            from base.api import DecimalEncoder
+
             params = {
                 "id": user_data["id"],
                 "username": user_data["username"],
@@ -106,14 +108,14 @@ class UserRepository:
                 "role": user_data.get("role", "normal"),
                 "created_by": user_data.get("created_by", "admin"),
                 "is_bot": user_data.get("is_bot", False),
-                "bot_config": json.dumps(user_data.get("bot_config", {})),
+                "bot_config": json.dumps(user_data.get("bot_config", {}), cls=DecimalEncoder),
                 "is_new": user_data.get("is_new", True),
                 "red_packet_settings": json.dumps(user_data.get("red_packet_settings", {
                     "enabled": True,
                     "max_amount": 1000.00,
                     "min_amount": 10.00,
                     "daily_limit": 5
-                }))
+                }), cls=DecimalEncoder)
             }
 
             await session.execute(query, params)
@@ -133,13 +135,15 @@ class UserRepository:
 
         async with self._session_factory() as session:
             import json
+            from base.api import DecimalEncoder
+
             # 构建SET子句
             set_parts = []
             params = {"user_id": user_id, "chat_id": chat_id}
 
             for key, value in updates.items():
                 if key in ["bot_config", "red_packet_settings"] and isinstance(value, dict):
-                    value = json.dumps(value)
+                    value = json.dumps(value, cls=DecimalEncoder)
                 set_parts.append(f"{key} = :{key}")
                 params[key] = value
 
