@@ -396,6 +396,25 @@ class DrawScheduler:
         """
         self.unregister_chat_from_global_timer(chat_id)
 
+    def restart_timer(self, chat_id: str, game_type: str):
+        """
+        重启群聊的定时器（用于切换游戏类型）
+        对应 Node.js: 修改游戏类型后的逻辑 (admin-server.js line 1240-1244)
+
+        Args:
+            chat_id: 群聊ID
+            game_type: 新的游戏类型
+        """
+        logger.info(f"🔄 重启定时器: {chat_id} -> {game_type}")
+
+        # 1. 从旧的全局定时器中注销
+        self.unregister_chat_from_global_timer(chat_id)
+
+        # 2. 注册到新的全局定时器
+        self.register_chat_to_global_timer(chat_id, game_type)
+
+        logger.info(f"✅ 定时器已重启: {chat_id} 已切换到 {game_type}")
+
     def is_running(self, chat_id: str) -> bool:
         """
         检查群聊的定时器是否运行中

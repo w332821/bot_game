@@ -426,12 +426,14 @@ def calculate_result(
             - payout: 派彩金额
             - profit: 盈亏金额
     """
+    # 兼容两种字段名：bet_amount（数据库）和 amount（解析下注文本）
+    amount = bet.get('bet_amount') or bet.get('amount')
+
     status = 'lose'
     payout = Decimal('0')
-    profit = -bet['amount']
+    profit = -amount
 
     bet_type = bet['type']
-    amount = bet['amount']
     odds = bet['odds']
 
     if bet_type == 'fan':
@@ -786,12 +788,15 @@ def settle_tema_bet(bet: Dict[str, Any], tema_number: int) -> Dict[str, Any]:
     Returns:
         Dict: 结算结果
     """
+    # 兼容两种字段名：bet_amount（数据库）和 amount（解析下注文本）
+    amount = bet.get('bet_amount') or bet.get('amount')
+
     result = {
         **bet,
         'tema_number': tema_number,
         'status': 'lose',
         'payout': Decimal('0'),
-        'profit': -bet['amount']
+        'profit': -amount
     }
 
     # 只处理特码类型
@@ -802,8 +807,8 @@ def settle_tema_bet(bet: Dict[str, Any], tema_number: int) -> Dict[str, Any]:
     # 特码：匹配六合彩特码号码
     if bet['number'] == tema_number:
         result['status'] = 'win'
-        result['payout'] = bet['amount'] * bet['odds']
-        result['profit'] = result['payout'] - bet['amount']
+        result['payout'] = amount * bet['odds']
+        result['profit'] = result['payout'] - amount
 
     # 保留两位小数
     result['payout'] = round(result['payout'], 2)

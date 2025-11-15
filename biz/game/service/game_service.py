@@ -457,9 +457,15 @@ class GameService:
                         except:
                             bet_details = None
 
-                    # 如果没有 bet_details，使用 bet 本身
+                    # 如果没有 bet_details，使用 bet 本身，并映射字段
                     if not bet_details:
-                        bet_details = bet
+                        # 将数据库字段映射为 calculate_result 期望的字段
+                        bet_details = {
+                            'type': bet.get('lottery_type'),
+                            'bet_amount': bet.get('bet_amount'),  # 使用 bet_amount
+                            'odds': bet.get('odds'),
+                            'number': bet.get('bet_number')
+                        }
 
                     # 计算结果
                     status, payout, profit = game_logic.calculate_result(
