@@ -550,7 +550,7 @@ class DrawApiClient:
 
         return {
             'issue': result['issue'],
-            'draw_number': None,  # 六合彩没有番数
+            'draw_number': result['draw_number'],  # 对第二个游戏来说，draw_number 是特码号码
             'draw_code': result['draw_code'],
             'special_number': result['special_number'],
             'draw_time': datetime.now()

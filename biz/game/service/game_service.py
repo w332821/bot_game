@@ -421,10 +421,10 @@ class GameService:
             # 添加调试日志
             logger.info(f"🎲 开奖数据: game_type={game_type}, draw_number={draw_number}, special_number={special_number}, draw_code={draw_code}")
 
-            # 计算大小单双（仅用于幸运8）- 对应 bot-server.js line 596-602
+            # 计算大小单双（仅用于幸运8）- 对应 bot-server.js line 595-601
             size_type = ''
             parity_type = ''
-            if special_number:
+            if special_number and game_type == 'lucky8':
                 size_type = '大' if special_number > 24 else '小'
                 parity_type = '单' if special_number % 2 == 1 else '双'
 

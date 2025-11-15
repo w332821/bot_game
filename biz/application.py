@@ -77,6 +77,39 @@ async def lifespan(app: FastAPI):
     scheduler = init_scheduler(game_service, bot_client)
     logger.info("✅ 开奖调度器已初始化")
 
+    # 自动注册所有已存在的活跃群聊到调度器
+    try:
+        from biz.chat.repo.chat_repo import ChatRepository
+        chat_repo = container.chat_repo()
+
+        # 获取所有活跃群聊
+        active_chats = await chat_repo.get_all_chats(limit=1000, status='active')
+        logger.info(f"📊 发现 {len(active_chats)} 个活跃群聊")
+
+        # 按游戏类型分组注册
+        lucky8_count = 0
+        liuhecai_count = 0
+
+        for chat in active_chats:
+            chat_id = chat['id']
+            game_type = chat.get('game_type', 'lucky8')
+
+            # 注册到全局定时器
+            scheduler.register_chat_to_global_timer(chat_id, game_type)
+
+            if game_type == 'lucky8':
+                lucky8_count += 1
+            elif game_type == 'liuhecai':
+                liuhecai_count += 1
+
+        logger.info(f"✅ 已注册群聊到调度器:")
+        logger.info(f"   - 澳洲幸运8: {lucky8_count} 个群聊")
+        logger.info(f"   - 六合彩: {liuhecai_count} 个群聊")
+
+    except Exception as e:
+        logger.error(f"❌ 自动注册群聊失败: {str(e)}", exc_info=True)
+        logger.warning("⚠️ 定时器未启动，需要等待群聊事件触发")
+
     yield
 
     # 关闭时
