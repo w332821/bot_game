@@ -574,6 +574,26 @@ class DrawApiClient:
             logger.error(f"❌ 不支持的游戏类型: {game_type}")
             return None
 
+    async def get_recent_draws(self, game_type: str, limit: int = 30) -> List[Dict[str, Any]]:
+        """
+        根据游戏类型获取最近N期开奖记录（统一接口）
+        对应 bot-server.js 中 drawApi.getRecentLucky8Draws() 和 getRecentMarkSixDraws()
+
+        Args:
+            game_type: 游戏类型（lucky8/liuhecai）
+            limit: 获取数量
+
+        Returns:
+            List[Dict]: 开奖记录数组
+        """
+        if game_type == 'lucky8':
+            return self.get_recent_lucky8_draws(limit=limit)
+        elif game_type == 'liuhecai':
+            return self.get_recent_marksix_draws(limit=limit)
+        else:
+            logger.error(f"❌ 不支持的游戏类型: {game_type}")
+            return []
+
     def get_draw_stats(self) -> Dict[str, Any]:
         """
         获取开奖数据统计信息

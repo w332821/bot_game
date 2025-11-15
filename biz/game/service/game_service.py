@@ -383,7 +383,15 @@ class GameService:
     async def execute_draw(self, chat_id: str) -> None:
         """
         执行开奖
-        对应 bot-server.js 的 executeDraw 函数
+        对应 bot-server.js 的 executeDraw 函数 (line 554-817)
+
+        完全按照Node.js版本的逻辑实现，包括发送以下6条消息：
+        1. 开奖信息
+        2. 中奖名单
+        3. 开奖图片
+        4. 历史宝路（仅澳洲幸运8）
+        5. 积分名单
+        6. 下注速查指南
 
         Args:
             chat_id: 群聊ID
@@ -416,6 +424,13 @@ class GameService:
             # 添加调试日志
             logger.info(f"🎲 开奖数据: game_type={game_type}, draw_number={draw_number}, special_number={special_number}, draw_code={draw_code}")
 
+            # 计算大小单双（仅用于幸运8）- 对应 bot-server.js line 596-602
+            size_type = ''
+            parity_type = ''
+            if special_number:
+                size_type = '大' if special_number > 24 else '小'
+                parity_type = '单' if special_number % 2 == 1 else '双'
+
             # 保存开奖记录
             await self.draw_repo.create({
                 'chat_id': chat_id,
@@ -430,113 +445,239 @@ class GameService:
             # 获取所有pending的投注
             pending_bets = await self.bet_repo.get_pending_bets_by_issue(chat_id, issue)
 
-            if not pending_bets:
-                # 没有投注，只发送开奖结果
-                response = f"🎉【第{issue}期开奖】🎉\n\n"
-                if game_type == 'lucky8':
-                    response += f"开奖号码: {draw_number}\n"
-                    response += f"特码: {special_number}\n"
-                else:
-                    response += f"开奖号码: {special_number}\n"
-                response += "\n本期无投注"
+            # 结算所有投注 - 对应 bot-server.js line 604-658
+            results = []
+            if pending_bets:
+                for bet in pending_bets:
+                    # 解析 bet_details（如果是 JSON 字符串）
+                    import json
+                    bet_details = bet.get('bet_details')
+                    if bet_details and isinstance(bet_details, str):
+                        try:
+                            bet_details = json.loads(bet_details)
+                        except:
+                            bet_details = None
 
-                await self.bot_client.send_message(chat_id, response)
-                return
+                    # 如果没有 bet_details，使用 bet 本身
+                    if not bet_details:
+                        bet_details = bet
 
-            # 结算所有投注
-            winners = []
-            losers = []
-            ties = []
+                    # 计算结果
+                    status, payout, profit = game_logic.calculate_result(
+                        bet=bet_details,
+                        draw_code=draw_code,
+                        draw_number=draw_number,
+                        special_number=special_number
+                    )
 
-            for bet in pending_bets:
-                # 解析 bet_details（如果是 JSON 字符串）
-                import json
-                bet_details = bet.get('bet_details')
-                if bet_details and isinstance(bet_details, str):
-                    try:
-                        bet_details = json.loads(bet_details)
-                    except:
-                        bet_details = None
+                    # 更新投注记录
+                    await self.bet_repo.settle_bet(
+                        bet_id=bet['id'],
+                        result=status,
+                        pnl=profit,
+                        draw_number=draw_number,
+                        draw_code=draw_code
+                    )
 
-                # 如果没有 bet_details，使用 bet 本身
-                if not bet_details:
-                    bet_details = bet
+                    # 更新用户余额
+                    if payout > 0:
+                        await self.user_repo.add_balance(bet['user_id'], chat_id, payout)
 
-                # 计算结果
-                status, payout, profit = game_logic.calculate_result(
-                    bet=bet_details,
-                    draw_code=draw_code,
-                    draw_number=draw_number,
-                    special_number=special_number
-                )
+                    # 获取用户信息
+                    user = await self.user_repo.get_user_in_chat(bet['user_id'], chat_id)
 
-                # 更新投注记录
-                await self.bet_repo.settle_bet(
-                    bet_id=bet['id'],
-                    result=status,
-                    pnl=profit,
-                    draw_number=draw_number,
-                    draw_code=draw_code
-                )
+                    # 保存结果信息（用于后续消息生成）
+                    bet_type = bet_details.get('type') or bet_details.get('bet_type') or bet.get('lottery_type') or bet.get('bet_type')
+                    amount = bet.get('bet_amount') or bet.get('amount', 0)
 
-                # 更新用户余额
-                if payout > 0:
-                    await self.user_repo.add_balance(bet['user_id'], chat_id, payout)
+                    results.append({
+                        'playerId': bet['user_id'],
+                        'playerName': user['username'],
+                        'type': bet_type,
+                        'number': bet_details.get('number'),
+                        'first': bet_details.get('first'),
+                        'second': bet_details.get('second'),
+                        'numbers': bet_details.get('numbers'),
+                        'jinNumber': bet_details.get('jinNumber'),
+                        'amount': float(amount),
+                        'status': status,
+                        'profit': float(profit)
+                    })
 
-                # 分类统计
-                user = await self.user_repo.get_user_in_chat(bet['user_id'], chat_id)
-                # bet_type可能在bet_details中，也可能在bet中的lottery_type字段
-                bet_type = bet_details.get('bet_type') or bet.get('lottery_type') or bet.get('bet_type')
-                bet_type_name = game_logic.format_bet_type(bet_type)
-                # amount字段可能叫bet_amount或amount
-                amount = bet.get('bet_amount') or bet.get('amount', 0)
-                result_item = {
-                    'username': user['username'],
-                    'bet_type': bet_type_name,
-                    'amount': float(amount),
-                    'profit': float(profit)
-                }
+            # ==================== 消息1: 开奖信息 ====================
+            # 对应 bot-server.js line 660-673
+            game_name = '澳洲幸运8' if game_type == 'lucky8' else '新澳'
+            message = f"{game_name}\n\n第{issue}期\n\n开奖号码：\n{draw_code}\n\n"
 
-                if status == 'win':
-                    winners.append(result_item)
-                elif status == 'lose':
-                    losers.append(result_item)
-                else:
-                    ties.append(result_item)
-
-            # 生成开奖消息
-            response = f"🎉【第{issue}期开奖】🎉\n\n"
-
-            if game_type == 'lucky8':
-                response += f"开奖号码: {draw_number}\n"
-                response += f"特码: {special_number}\n\n"
+            if special_number:
+                message += f"开奖结果：{str(special_number).zfill(2)}({draw_number}){size_type}{parity_type}"
             else:
-                response += f"开奖号码: {special_number}\n\n"
+                if game_name == '新澳':
+                    message += f"开奖结果：{draw_number}特"
+                else:
+                    message += f"开奖结果：{draw_number}番"
 
-            if winners:
-                response += "中奖用户：\n"
-                for w in winners:
-                    response += f"• {w['username']} - {w['bet_type']} 赢 +{w['profit']:.2f}\n"
-                response += "\n"
+            await self.bot_client.send_message(chat_id, message)
 
-            if ties:
-                response += "和局用户：\n"
-                for t in ties:
-                    response += f"• {t['username']} - {t['bet_type']} 和 +0.00\n"
-                response += "\n"
+            # ==================== 消息2: 中奖名单 ====================
+            # 对应 bot-server.js line 676-718
+            winning_list_message = f"{issue}期中奖名单"
 
-            if losers:
-                response += "未中奖用户：\n"
-                for l in losers:
-                    response += f"• {l['username']} - {l['bet_type']} 输 {l['profit']:.2f}\n"
+            if results:
+                has_winners = False
 
-            await self.bot_client.send_message(chat_id, response)
+                # 按玩家分组
+                player_results = {}
+                for result in results:
+                    player_name = result['playerName']
+                    if player_name not in player_results:
+                        player_results[player_name] = []
+                    player_results[player_name].append(result)
 
-            logger.info(f"✅ 开奖完成: 期号={issue}, 中奖={len(winners)}, 未中奖={len(losers)}")
+                # 为每个玩家的每个获胜下注单独成行
+                for player_name, player_bets in player_results.items():
+                    for result in player_bets:
+                        if result['status'] == 'win':
+                            # 格式化下注描述
+                            bet_desc = self._format_bet_description(result)
+                            winning_list_message += f"\n@{player_name} {bet_desc}{result['amount']:.0f}={result['profit']:.2f}"
+                            has_winners = True
+
+                # 如果没有中奖者
+                if not has_winners:
+                    winning_list_message += '\n\n本期无中奖用户'
+
+            await self.bot_client.send_message(chat_id, winning_list_message)
+
+            # ==================== 消息3: 开奖图片 ====================
+            # 对应 bot-server.js line 720-768
+            try:
+                # 获取历史开奖记录用于生成图片
+                draw_history = await self.draw_repo.get_recent_draws(chat_id, limit=15)
+
+                if draw_history:
+                    from utils import get_draw_image_generator
+                    import os
+
+                    image_generator = get_draw_image_generator()
+                    image_path = image_generator.generate_image(game_type, draw_history)
+
+                    if image_path:
+                        filename = os.path.basename(image_path)
+                        public_url = f"/public/images/{filename}"
+
+                        image_host = os.getenv('IMAGE_HOST', 'myrepdemo.top')
+                        image_port = os.getenv('IMAGE_PORT', '65035')
+                        full_url = f"http://{image_host}:{image_port}{public_url}"
+
+                        await self.bot_client.send_image(chat_id, full_url, filename=filename)
+                        logger.info(f"✅ 已发送开奖图片")
+            except Exception as e:
+                logger.error(f"⚠️ 发送开奖图片失败: {str(e)}")
+
+            # ==================== 消息4: 历史宝路 (仅澳洲幸运8) ====================
+            # 对应 bot-server.js line 772-779
+            if game_type == 'lucky8':
+                try:
+                    # 获取最近30期开奖记录
+                    from external.draw_api_client import get_draw_api_client
+                    draw_client = get_draw_api_client()
+                    recent_draws = await draw_client.get_recent_draws(game_type, limit=30)
+
+                    if recent_draws:
+                        # 反向排列，最新的在前
+                        baolu_results = '-'.join([str(d['draw_number']) for d in reversed(recent_draws)])
+                        baolu_message = f"历史宝路\n{baolu_results}"
+                        await self.bot_client.send_message(chat_id, baolu_message)
+                        logger.info(f"✅ 已发送历史宝路")
+                except Exception as e:
+                    logger.error(f"⚠️ 发送历史宝路失败: {str(e)}")
+
+            # ==================== 消息5: 积分名单 ====================
+            # 对应 bot-server.js line 782-792
+            try:
+                # 获取群内所有用户
+                all_users = await self.user_repo.get_chat_users(chat_id)
+
+                # 按余额降序排列
+                all_users.sort(key=lambda u: u['balance'], reverse=True)
+
+                score_message = f"{game_name}\n\n第{issue}期积分名单\n\n上下分请联系财务\n\n======积分排行======\n\n🔥玩家 💰积分\n\n"
+
+                for user in all_users:
+                    score_message += f"{user['username']}:{user['balance']:.2f}\n"
+
+                await self.bot_client.send_message(chat_id, score_message)
+                logger.info(f"✅ 已发送积分名单")
+            except Exception as e:
+                logger.error(f"⚠️ 发送积分名单失败: {str(e)}")
+
+            # ==================== 消息6: 下注速查指南 ====================
+            # 对应 bot-server.js line 795-813
+            bet_guide_message = """番：3番300 → 命中结果号
+
+念：1念2/300 → 首位赢、次位和局退本金
+
+角：12/200或12角200 → 两个结果号任意命中
+
+借：13借4/120 → 首位赢、末位和、其他输
+
+正(禁号)：3无4/220 → 指定禁号、命中赢、禁号输、其他退本金
+
+三码(中)：123/500 → 覆盖3个结果号赢、其他输
+
+单双：单200/双150 → 按开奖号码(1-20)奇偶判定
+
+特码：5特20或5.6/60 → 命中开奖号码1-20
+
+关键词：查(积分+流水)、流水(今日+累计盈亏)、取消(封盘前撤单)"""
+
+            await self.bot_client.send_message(chat_id, bet_guide_message)
+            logger.info(f"✅ 已发送下注速查指南")
+
+            logger.info(f"✅ 开奖完成: 期号={issue}, 中奖={len([r for r in results if r['status'] == 'win'])}, 所有6条消息已发送")
 
         except Exception as e:
             logger.error(f"❌ 开奖失败: {str(e)}", exc_info=True)
             await self.bot_client.send_message(chat_id, "❌ 开奖失败: 系统错误")
+
+    def _format_bet_description(self, result: Dict[str, Any]) -> str:
+        """
+        格式化下注描述
+        对应 bot-server.js line 694-704
+
+        Args:
+            result: 结算结果
+
+        Returns:
+            str: 格式化的下注描述
+        """
+        bet_type = result['type']
+
+        if bet_type == 'fan':
+            return f"{result['number']}番"
+        elif bet_type == 'zheng':
+            return f"{result['number']}正"
+        elif bet_type == 'tema':
+            return f"{result['number']}特"
+        elif bet_type == 'nian':
+            return f"{result['first']}念{result['second']}"
+        elif bet_type == 'jiao':
+            numbers = result.get('numbers', [])
+            return f"{''.join(map(str, numbers))}角"
+        elif bet_type == 'tong':
+            return f"{result['first']}{result['second']}通"
+        elif bet_type == 'zheng_jin':
+            return f"{result['number']}无{result['jinNumber']}"
+        elif bet_type == 'zhong':
+            numbers = result.get('numbers', [])
+            return f"{''.join(map(str, numbers))}中"
+        elif bet_type == 'odd':
+            return '单'
+        elif bet_type == 'even':
+            return '双'
+        else:
+            return game_logic.format_bet_type(bet_type)
 
     async def handle_draw_history(self, chat_id: str) -> None:
         """
