@@ -151,10 +151,15 @@ class GameService:
             # 获取新余额
             new_balance = updated_user['balance']
 
-            # 🔥 CRITICAL: 不记录期号，与Node.js逻辑一致
-            # Node.js将下注加入 session.pendingBets，不记录期号
-            # 开奖时结算所有 pending 的投注
-            current_issue = "pending"  # 占位符
+            # 🔥 CRITICAL: 获取当前期号用于显示
+            # 从第三方API获取最新期号，用于下注确认消息
+            # 但结算时会结算所有pending的投注（不限期号）
+            try:
+                draw_result = await self._fetch_draw_result(game_type)
+                current_issue = draw_result.get('issue', 'unknown') if draw_result else 'unknown'
+            except Exception as e:
+                logger.warning(f"⚠️ 获取期号失败，使用占位符: {str(e)}")
+                current_issue = "待开奖"
 
             # 保存下注记录
             bet_ids = []
