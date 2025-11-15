@@ -482,11 +482,15 @@ class GameService:
 
                 # 分类统计
                 user = await self.user_repo.get_user_in_chat(bet['user_id'], chat_id)
-                bet_type_name = game_logic.format_bet_type(bet['bet_type'])
+                # bet_type可能在bet_details中，也可能在bet中的lottery_type字段
+                bet_type = bet_details.get('bet_type') or bet.get('lottery_type') or bet.get('bet_type')
+                bet_type_name = game_logic.format_bet_type(bet_type)
+                # amount字段可能叫bet_amount或amount
+                amount = bet.get('bet_amount') or bet.get('amount', 0)
                 result_item = {
                     'username': user['username'],
                     'bet_type': bet_type_name,
-                    'amount': float(bet['amount']),
+                    'amount': float(amount),
                     'profit': float(profit)
                 }
 
