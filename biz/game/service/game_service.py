@@ -357,7 +357,7 @@ class GameService:
                 return
 
             # 计算退还金额
-            refund_amount = sum(bet['amount'] for bet in pending_bets)
+            refund_amount = sum(bet['bet_amount'] for bet in pending_bets)
 
             # 退还余额
             await self.user_repo.add_balance(sender_id, chat_id, refund_amount)
