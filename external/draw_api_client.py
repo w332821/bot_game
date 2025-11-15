@@ -309,12 +309,16 @@ class DrawApiClient:
             # 如果没有数据，返回随机番数（兜底）
             logger.warning("⚠️ 未获取到快乐十分开奖数据，使用随机番数")
             import random
+            # 生成随机番数 (1-4)
+            random_fan = random.randint(1, 4)
+            # 生成随机特码 (1-20，澳洲幸运8的特码范围)
+            random_tema = random.randint(1, 20)
             return {
-                'draw_number': random.randint(1, 4),
+                'draw_number': random_fan,
                 'draw_code': None,
                 'issue': 'random',
                 'numbers': [],
-                'special_number': None,
+                'special_number': random_tema,
                 'is_random': True
             }
 

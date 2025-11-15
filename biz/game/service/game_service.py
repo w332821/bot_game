@@ -413,6 +413,9 @@ class GameService:
             draw_code = draw_result['draw_code']
             special_number = draw_result.get('special_number')
 
+            # 添加调试日志
+            logger.info(f"🎲 开奖数据: game_type={game_type}, draw_number={draw_number}, special_number={special_number}, draw_code={draw_code}")
+
             # 保存开奖记录
             await self.draw_repo.create({
                 'chat_id': chat_id,
