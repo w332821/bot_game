@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 TEST_DATABASE_URL = "mysql+asyncmy://root:123456@localhost:3306/game_bot_test"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def db_engine():
     """创建测试数据库引擎"""
     engine = create_async_engine(
