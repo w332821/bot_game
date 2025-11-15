@@ -556,16 +556,24 @@ class DrawApiClient:
             'draw_time': datetime.now()
         }
 
-    async def get_draw_result(self, game_type: str) -> Optional[Dict[str, Any]]:
+    async def get_draw_result(self, game_type: str, force_refresh: bool = True) -> Optional[Dict[str, Any]]:
         """
         根据游戏类型获取最新开奖结果（统一接口）
 
         Args:
             game_type: 游戏类型（lucky8/liuhecai）
+            force_refresh: 是否强制刷新API数据（默认True，确保每次开奖都获取最新数据）
 
         Returns:
             Dict: 开奖数据
         """
+        # 在获取结果前先刷新数据，确保拿到最新的开奖号码
+        if force_refresh:
+            if game_type == 'lucky8':
+                await self.fetch_lucky8_results()
+            elif game_type == 'liuhecai':
+                await self.fetch_draw_results()
+
         if game_type == 'lucky8':
             return await self.get_latest_lucky8_draw()
         elif game_type == 'liuhecai':
