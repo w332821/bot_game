@@ -151,8 +151,10 @@ class GameService:
             # 获取新余额
             new_balance = updated_user['balance']
 
-            # 获取当前期号
-            current_issue = await self._generate_issue_number(game_type)
+            # 🔥 CRITICAL: 不记录期号，与Node.js逻辑一致
+            # Node.js将下注加入 session.pendingBets，不记录期号
+            # 开奖时结算所有 pending 的投注
+            current_issue = "pending"  # 占位符
 
             # 保存下注记录
             bet_ids = []
@@ -165,7 +167,7 @@ class GameService:
                     'amount': bet['amount'],
                     'odds': bet['odds'],
                     'status': 'pending',
-                    'draw_issue': current_issue,
+                    'draw_issue': current_issue,  # 使用占位符，开奖时更新
                     'bet_details': bet  # 保存完整的下注详情
                 })
                 bet_ids.append(bet_record['id'])
@@ -407,9 +409,6 @@ class GameService:
 
             game_type = chat.get('game_type', 'lucky8') if isinstance(chat, dict) else chat.game_type
 
-            # 生成期号
-            issue = await self._generate_issue_number(game_type)
-
             # 获取开奖号码（从第三方API）
             draw_result = await self._fetch_draw_result(game_type)
             if not draw_result:
@@ -420,6 +419,10 @@ class GameService:
             draw_number = draw_result['draw_number']
             draw_code = draw_result['draw_code']
             special_number = draw_result.get('special_number')
+
+            # 🔥 CRITICAL: 使用第三方API返回的期号，而不是自己生成
+            # 对应 Node.js: drawInfo.issue (来自 latestLucky8Draw.preDrawIssue)
+            issue = draw_result.get('issue', 'unknown')
 
             # 添加调试日志
             logger.info(f"🎲 开奖数据: game_type={game_type}, draw_number={draw_number}, special_number={special_number}, draw_code={draw_code}")
@@ -443,7 +446,9 @@ class GameService:
             })
 
             # 获取所有pending的投注
-            pending_bets = await self.bet_repo.get_pending_bets_by_issue(chat_id, issue)
+            # 🔥 CRITICAL: 结算所有pending的投注（不管期号），与Node.js逻辑一致
+            # Node.js使用 session.pendingBets（不限期号）
+            pending_bets = await self.bet_repo.get_all_pending_bets(chat_id)
 
             # 结算所有投注 - 对应 bot-server.js line 604-658
             results = []
@@ -470,13 +475,14 @@ class GameService:
                         special_number=special_number
                     )
 
-                    # 更新投注记录
+                    # 更新投注记录（包括期号）
                     await self.bet_repo.settle_bet(
                         bet_id=bet['id'],
                         result=status,
                         pnl=profit,
                         draw_number=draw_number,
-                        draw_code=draw_code
+                        draw_code=draw_code,
+                        issue=issue  # 更新为实际的期号
                     )
 
                     # 更新用户余额
@@ -785,5 +791,6 @@ class GameService:
         return {
             'draw_number': result.get('draw_number'),
             'draw_code': result.get('draw_code'),
-            'special_number': result.get('special_number')
+            'special_number': result.get('special_number'),
+            'issue': result.get('issue', 'unknown')  # 返回第三方API的期号
         }

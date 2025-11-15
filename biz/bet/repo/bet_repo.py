@@ -200,24 +200,43 @@ class BetRepository:
         result: str,
         pnl: Decimal,
         draw_number: Optional[int],
-        draw_code: Optional[str]
+        draw_code: Optional[str],
+        issue: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """结算投注"""
         async with self._session_factory() as session:
-            query = text("""
-                UPDATE bets
-                SET result = :result, pnl = :pnl,
-                    draw_number = :draw_number, draw_code = :draw_code,
-                    settled_at = NOW()
-                WHERE id = :bet_id
-            """)
-            params = {
-                "bet_id": bet_id,
-                "result": result,
-                "pnl": pnl,
-                "draw_number": draw_number,
-                "draw_code": draw_code
-            }
+            # 如果提供了期号，则同时更新期号
+            if issue:
+                query = text("""
+                    UPDATE bets
+                    SET result = :result, pnl = :pnl,
+                        draw_number = :draw_number, draw_code = :draw_code,
+                        issue = :issue, settled_at = NOW()
+                    WHERE id = :bet_id
+                """)
+                params = {
+                    "bet_id": bet_id,
+                    "result": result,
+                    "pnl": pnl,
+                    "draw_number": draw_number,
+                    "draw_code": draw_code,
+                    "issue": issue
+                }
+            else:
+                query = text("""
+                    UPDATE bets
+                    SET result = :result, pnl = :pnl,
+                        draw_number = :draw_number, draw_code = :draw_code,
+                        settled_at = NOW()
+                    WHERE id = :bet_id
+                """)
+                params = {
+                    "bet_id": bet_id,
+                    "result": result,
+                    "pnl": pnl,
+                    "draw_number": draw_number,
+                    "draw_code": draw_code
+                }
             await session.execute(query, params)
             await session.commit()
 
@@ -435,6 +454,37 @@ class BetRepository:
 
             result = await session.execute(query, params)
             rows = result.fetchall()
+            return [dict(row._mapping) for row in rows]
+
+    async def get_all_pending_bets(
+        self,
+        chat_id: str
+    ) -> List[Dict[str, Any]]:
+        """
+        获取群聊的所有待结算投注（不限期号）
+        对应 Node.js: session.pendingBets
+
+        Args:
+            chat_id: 群聊ID
+
+        Returns:
+            List[Dict]: 投注记录列表
+        """
+        async with self._session_factory() as session:
+            query = text("""
+                SELECT * FROM bets
+                WHERE chat_id = :chat_id
+                      AND status = 'active' AND result = 'pending'
+                ORDER BY created_at ASC
+            """)
+
+            params = {
+                "chat_id": chat_id
+            }
+
+            result = await session.execute(query, params)
+            rows = result.fetchall()
+
             return [dict(row._mapping) for row in rows]
 
     async def get_pending_bets_by_issue(
