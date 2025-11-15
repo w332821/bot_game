@@ -487,6 +487,40 @@ class BetRepository:
 
             return [dict(row._mapping) for row in rows]
 
+    async def get_user_all_pending_bets(
+        self,
+        user_id: str,
+        chat_id: str
+    ) -> List[Dict[str, Any]]:
+        """
+        获取用户在群聊的所有待结算投注（不限期号）
+        对应 Node.js: session.pendingBets.filter(b => b.playerId === senderId)
+
+        Args:
+            user_id: 用户ID
+            chat_id: 群聊ID
+
+        Returns:
+            List[Dict]: 投注记录列表
+        """
+        async with self._session_factory() as session:
+            query = text("""
+                SELECT * FROM bets
+                WHERE user_id = :user_id AND chat_id = :chat_id
+                      AND status = 'active' AND result = 'pending'
+                ORDER BY created_at ASC
+            """)
+
+            params = {
+                "user_id": user_id,
+                "chat_id": chat_id
+            }
+
+            result = await session.execute(query, params)
+            rows = result.fetchall()
+
+            return [dict(row._mapping) for row in rows]
+
     async def get_pending_bets_by_issue(
         self,
         chat_id: str,

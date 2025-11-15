@@ -342,25 +342,17 @@ class GameService:
 
             logger.info(f"🚫 取消下注: 用户={sender_name}, 群={chat_id}")
 
-            # 获取当前期号
-            chat = await self.chat_repo.get_by_id(chat_id)
-            if not chat:
-                return
-
-            game_type = chat.get('game_type', 'lucky8') if isinstance(chat, dict) else chat.game_type
-            current_issue = await self._generate_issue_number(game_type)
-
-            # 获取当前期所有pending的下注
-            pending_bets = await self.bet_repo.get_user_pending_bets(
+            # 🔥 CRITICAL: 取消用户所有pending的下注（不限期号）
+            # 对应 Node.js: session.pendingBets.filter(b => b.playerId === senderId)
+            pending_bets = await self.bet_repo.get_user_all_pending_bets(
                 user_id=sender_id,
-                chat_id=chat_id,
-                issue=current_issue
+                chat_id=chat_id
             )
 
             if not pending_bets:
                 await self.bot_client.send_message(
                     chat_id,
-                    f"@{sender_name} 本期没有待结算的下注"
+                    f"@{sender_name}\n当前没有下注"
                 )
                 return
 
@@ -374,11 +366,8 @@ class GameService:
             for bet in pending_bets:
                 await self.bet_repo.cancel_bet(bet['id'])
 
-            # 获取新余额
-            user = await self.user_repo.get_user_in_chat(sender_id, chat_id)
-            new_balance = user['balance']
-
-            response = f"✅ 已取消本期所有下注，退还金额: {refund_amount:.2f}\n当前余额: {new_balance:.2f}"
+            # 对应 Node.js: "@sender.name\n取消成功"
+            response = f"@{sender_name}\n取消成功"
 
             await self.bot_client.send_message(chat_id, response)
 
