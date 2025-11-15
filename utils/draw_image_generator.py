@@ -37,8 +37,8 @@ class DrawImageGenerator:
         self.padding = 20
 
         # 尝试加载字体
-        self.font = self._load_font(14)  # 普通字体
-        self.header_font = self._load_font(15, bold=True)  # 表头加粗
+        self.font = self._load_font(16)  # 普通字体，增大以更清晰
+        self.header_font = self._load_font(18, bold=True)  # 表头加粗
         self.footer_font = self._load_font(12)  # 底部小字
 
     def _load_font(self, size: int, bold: bool = False) -> ImageFont:
@@ -57,17 +57,22 @@ class DrawImageGenerator:
             # 尝试加载系统字体（支持中文）
             font_paths = [
                 "/System/Library/Fonts/PingFang.ttc",  # macOS
+                "/System/Library/Fonts/STHeiti Light.ttc",  # macOS 黑体
+                "/System/Library/Fonts/Hiragino Sans GB.ttc",  # macOS
                 "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",  # Linux
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",  # Linux
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # Linux Noto
                 "C:\\Windows\\Fonts\\msyh.ttc",  # Windows 微软雅黑
                 "C:\\Windows\\Fonts\\simhei.ttf",  # Windows 黑体
             ]
 
             for font_path in font_paths:
                 if os.path.exists(font_path):
+                    logger.info(f"✅ 使用字体: {font_path} (size={size})")
                     return ImageFont.truetype(font_path, size)
 
-            logger.warning("⚠️ 未找到系统字体，使用默认字体")
+            logger.error("❌ 未找到任何中文字体！表头和中文将无法显示")
+            logger.error("❌ 请安装中文字体，或检查字体路径")
             return ImageFont.load_default()
 
         except Exception as e:
@@ -98,7 +103,8 @@ class DrawImageGenerator:
 
         # 对应 Node.js line 312-320
         headers = ['期号', '开奖号码', '特码', '宝', '大小', '单双']
-        col_widths = [120, 150, 100, 100, 100, 100]
+        # 增加开奖号码列宽度，确保长号码能完整显示
+        col_widths = [100, 350, 100, 100, 100, 100]
 
         # 计算列位置 - 对应 Node.js line 336-339
         col_x = [self.padding]
@@ -107,7 +113,7 @@ class DrawImageGenerator:
 
         # 计算图片高度 - 对应 Node.js line 322-326
         rows = min(len(draws), 15)  # 最多显示15期
-        height = self.header_height + self.row_height * rows + 40 + 10
+        height = self.header_height + self.row_height * (rows + 1) + 40
 
         # 创建图片 - 对应 Node.js line 328-333
         image = Image.new('RGB', (self.width, height), color='white')
@@ -130,9 +136,10 @@ class DrawImageGenerator:
             draw_ctx.line([(x, 10), (x, 10 + self.header_height)], fill='#cccccc', width=1)
 
         # 表头文字 - 对应 Node.js line 358-365
+        # Node.js: ctx.fillText(header, colX[i] + colWidths[i] / 2, 30 + 8);
         for i, header in enumerate(headers):
             text_x = col_x[i] + col_widths[i] // 2
-            text_y = 10 + self.header_height // 2 - 8
+            text_y = 30 + 8  # 对应Node.js的固定位置
             # 居中绘制
             bbox = draw_ctx.textbbox((0, 0), header, font=self.header_font)
             text_width = bbox[2] - bbox[0]
@@ -188,9 +195,10 @@ class DrawImageGenerator:
             ]
 
             # 绘制文字 - 对应 Node.js line 420-425
+            # Node.js: ctx.fillText(text, colX[i] + colWidths[i] / 2, rowY + rowHeight / 2 + 5);
             for i, text in enumerate(data):
                 text_x = col_x[i] + col_widths[i] // 2
-                text_y = row_y + self.row_height // 2 - 8
+                text_y = row_y + self.row_height // 2 + 5  # 对应Node.js
 
                 # 居中绘制
                 bbox = draw_ctx.textbbox((0, 0), text, font=self.font)
