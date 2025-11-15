@@ -1,24 +1,15 @@
 import typing
 import json
-from decimal import Decimal
-from datetime import datetime, date
 from fastapi.responses import JSONResponse
-
-
-class DecimalEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles Decimal, datetime, and date types"""
-
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            # Convert Decimal to float for JSON serialization
-            return float(obj)
-        elif isinstance(obj, (datetime, date)):
-            # Convert datetime/date to ISO format string
-            return obj.isoformat()
-        return super().default(obj)
+from base.json_encoder import DecimalEncoder
 
 
 class UnifyResponse(JSONResponse):
+    """
+    统一的 API 响应类
+    自动处理 Decimal、datetime 等类型的序列化
+    """
+
     def render(self, content: typing.Any) -> bytes:
         new_content = {
             "code": 200,

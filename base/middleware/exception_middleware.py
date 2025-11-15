@@ -1,25 +1,11 @@
 import logging
 import json
-from decimal import Decimal
-from datetime import datetime, date
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from base.exception import UnifyException
+from base.json_encoder import DecimalEncoder
 
 logger = logging.getLogger(__name__)
-
-
-class DecimalEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles Decimal, datetime, and date types"""
-
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            # Convert Decimal to float for JSON serialization
-            return float(obj)
-        elif isinstance(obj, (datetime, date)):
-            # Convert datetime/date to ISO format string
-            return obj.isoformat()
-        return super().default(obj)
 
 
 async def exception_handler(request: Request, exc: Exception):

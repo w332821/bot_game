@@ -93,8 +93,7 @@ class UserRepository:
                 )
             """)
 
-            import json
-            from base.api import DecimalEncoder
+            from base.json_encoder import safe_json_dumps
 
             params = {
                 "id": user_data["id"],
@@ -108,14 +107,14 @@ class UserRepository:
                 "role": user_data.get("role", "normal"),
                 "created_by": user_data.get("created_by", "admin"),
                 "is_bot": user_data.get("is_bot", False),
-                "bot_config": json.dumps(user_data.get("bot_config", {}), cls=DecimalEncoder),
+                "bot_config": safe_json_dumps(user_data.get("bot_config", {})),
                 "is_new": user_data.get("is_new", True),
-                "red_packet_settings": json.dumps(user_data.get("red_packet_settings", {
+                "red_packet_settings": safe_json_dumps(user_data.get("red_packet_settings", {
                     "enabled": True,
                     "max_amount": 1000.00,
                     "min_amount": 10.00,
                     "daily_limit": 5
-                }), cls=DecimalEncoder)
+                }))
             }
 
             await session.execute(query, params)
@@ -134,8 +133,7 @@ class UserRepository:
             return await self.get_user_in_chat(user_id, chat_id)
 
         async with self._session_factory() as session:
-            import json
-            from base.api import DecimalEncoder
+            from base.json_encoder import safe_json_dumps
 
             # 构建SET子句
             set_parts = []
@@ -143,7 +141,7 @@ class UserRepository:
 
             for key, value in updates.items():
                 if key in ["bot_config", "red_packet_settings"] and isinstance(value, dict):
-                    value = json.dumps(value, cls=DecimalEncoder)
+                    value = safe_json_dumps(value)
                 set_parts.append(f"{key} = :{key}")
                 params[key] = value
 

@@ -41,7 +41,8 @@ class BotApiClient:
             logger.error("❌ API Secret未配置，无法生成签名")
             return ""
 
-        sign_data = json.dumps(data, separators=(',', ':'), ensure_ascii=False) + timestamp
+        from base.json_encoder import safe_json_dumps
+        sign_data = safe_json_dumps(data, separators=(',', ':'), ensure_ascii=False) + timestamp
         signature = hmac.new(
             self.api_secret.encode('utf-8'),
             sign_data.encode('utf-8'),
