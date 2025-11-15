@@ -169,7 +169,7 @@ class GameService:
                     'chat_id': chat_id,
                     'game_type': game_type,
                     'bet_type': bet['type'],
-                    'amount': bet['amount'],
+                    'amount': bet['amount'],  # repo的create方法接受amount参数
                     'odds': bet['odds'],
                     'status': 'pending',
                     'draw_issue': current_issue,  # 使用占位符，开奖时更新
@@ -311,9 +311,9 @@ class GameService:
             total_profit = Decimal('0')
 
             for bet in today_bets:
-                total_bet += bet['amount']
-                if bet.get('profit'):
-                    total_profit += bet['profit']
+                total_bet += bet['bet_amount']  # 数据库字段是bet_amount
+                if bet.get('pnl'):  # 数据库字段是pnl，不是profit
+                    total_profit += bet['pnl']
 
             profit_sign = '+' if total_profit >= 0 else ''
             response = f"@{sender_name}\n今日流水：{total_bet:.2f}，今日盈亏：{profit_sign}{total_profit:.2f}"
