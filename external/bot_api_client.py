@@ -118,10 +118,16 @@ class BotApiClient:
                     response_data = await response.json()
 
                     if response.status >= 400:
-                        logger.error(f"❌ Bot API请求失败: {method} {path}")
-                        logger.error(f"   状态码: {response.status}")
-                        logger.error(f"   响应: {response_data}")
-                        return {'success': False, 'error': response_data}
+                        # 403错误（机器人不在群里）使用WARNING级别，其他错误使用ERROR级别
+                        if response.status == 403:
+                            logger.warning(f"⚠️ Bot API请求被拒绝: {method} {path}")
+                            logger.warning(f"   状态码: {response.status}")
+                            logger.warning(f"   响应: {response_data}")
+                        else:
+                            logger.error(f"❌ Bot API请求失败: {method} {path}")
+                            logger.error(f"   状态码: {response.status}")
+                            logger.error(f"   响应: {response_data}")
+                        return {'success': False, 'error': response_data, 'status_code': response.status}
 
                     # 兼容不同的响应格式
                     # 如果响应是 {success: true, data: ...} 格式，直接返回
@@ -164,7 +170,11 @@ class BotApiClient:
         if result.get('success'):
             logger.info(f"✅ 消息发送成功")
         else:
-            logger.error(f"❌ 消息发送失败: {result.get('error')}")
+            # 403错误使用WARNING级别
+            if result.get('status_code') == 403:
+                logger.debug(f"⚠️ 消息发送失败（机器人不在群里）: {result.get('error')}")
+            else:
+                logger.error(f"❌ 消息发送失败: {result.get('error')}")
 
         return result
 
@@ -211,7 +221,11 @@ class BotApiClient:
         if result.get('success'):
             logger.info(f"✅ 图片发送成功")
         else:
-            logger.error(f"❌ 图片发送失败: {result.get('error')}")
+            # 403错误使用WARNING级别
+            if result.get('status_code') == 403:
+                logger.debug(f"⚠️ 图片发送失败（机器人不在群里）: {result.get('error')}")
+            else:
+                logger.error(f"❌ 图片发送失败: {result.get('error')}")
 
         return result
 

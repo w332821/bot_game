@@ -278,11 +278,17 @@ class DrawScheduler:
             logger.info(f"\n⏰ 开奖前90秒警告: {game_type}")
             for chat_id in registered_chats:
                 try:
-                    await self.bot_client.send_message(
+                    result = await self.bot_client.send_message(
                         chat_id,
                         "⏰ 提示：还剩30秒停止下注\n\n距离开奖还剩：90秒"
                     )
-                    logger.info(f"  ↳ 已发送90秒警告: {chat_id}")
+
+                    # 如果返回403错误（机器人不在群里），自动注销该群聊
+                    if not result.get('success') and result.get('status_code') == 403:
+                        logger.warning(f"  ⚠️ 机器人不在群聊 {chat_id}，自动注销")
+                        self.unregister_chat_from_global_timer(chat_id)
+                    else:
+                        logger.info(f"  ↳ 已发送90秒警告: {chat_id}")
                 except Exception as error:
                     logger.error(f"  ❌ 发送90秒警告失败 {chat_id}: {str(error)}")
 
@@ -307,11 +313,17 @@ class DrawScheduler:
             for chat_id in registered_chats:
                 try:
                     self.bet_lock_status[chat_id] = True  # 锁定该群聊
-                    await self.bot_client.send_message(
+                    result = await self.bot_client.send_message(
                         chat_id,
                         "🔒 已停止下注和取消操作，请等待开奖结果\n\n距离开奖还剩：60秒"
                     )
-                    logger.info(f"  ↳ 已锁定下注: {chat_id}")
+
+                    # 如果返回403错误（机器人不在群里），自动注销该群聊
+                    if not result.get('success') and result.get('status_code') == 403:
+                        logger.warning(f"  ⚠️ 机器人不在群聊 {chat_id}，自动注销")
+                        self.unregister_chat_from_global_timer(chat_id)
+                    else:
+                        logger.info(f"  ↳ 已锁定下注: {chat_id}")
                 except Exception as error:
                     logger.error(f"  ❌ 发送锁定提示失败 {chat_id}: {str(error)}")
 
