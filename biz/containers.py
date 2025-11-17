@@ -17,6 +17,7 @@ from biz.user.service.user_service import UserService
 from biz.odds.service.odds_service import OddsService
 from biz.game.service.game_service import GameService
 from biz.chat.service.chat_service import ChatService
+from biz.admin.service.admin_service import AdminService
 
 # Import external clients
 from external.bot_api_client import BotApiClient
@@ -94,6 +95,12 @@ class Container(containers.DeclarativeContainer):
         ChatService,
         chat_repo=chat_repo,
         scheduler=providers.Callable(lambda: getattr(container, 'scheduler_instance', None))
+    )
+
+    # 管理员服务
+    admin_service = providers.Factory(
+        AdminService,
+        admin_repo=admin_repo
     )
 
     # ===== External Clients =====

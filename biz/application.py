@@ -165,21 +165,25 @@ container = Container()
 # 导入路由
 from biz.game.webhook import webhook_api
 from biz.chat.api import chat_api
+from biz.admin.api import admin_api
 
 # 使用FastAPI依赖覆盖机制
 app.dependency_overrides[webhook_api.get_game_service] = lambda: container.game_service()
 app.dependency_overrides[webhook_api.get_user_service] = lambda: container.user_service()
 app.dependency_overrides[webhook_api.get_chat_repo] = lambda: container.chat_repo()
 app.dependency_overrides[webhook_api.get_bot_client] = lambda: container.bot_api_client()
+app.dependency_overrides[admin_api.get_admin_service] = lambda: container.admin_service()
 
 # 注册路由
 app.include_router(webhook_api.router)  # Webhook路由（不使用前缀）
 app.include_router(chat_api.router)  # Chat管理API
+app.include_router(admin_api.router)  # 管理后台API
 
 # Wire依赖注入
 container.wire(modules=[
     "biz.game.webhook.webhook_api",
     "biz.chat.api.chat_api",
+    "biz.admin.api.admin_api",
 ])
 
 # 健康检查端点

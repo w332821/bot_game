@@ -3,11 +3,16 @@ Admin API路由
 对应admin-server.js中的管理员相关接口
 """
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from pydantic import BaseModel, Field
+import os
+import jwt
+from datetime import datetime, timedelta
 
 from biz.admin.service.admin_service import AdminService
 from biz.admin.models.model import AdminLogin, AdminCreate
+from dependency_injector.wiring import inject, Provide
+from biz.containers import Container
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -27,16 +32,29 @@ class UpdateStatusRequest(BaseModel):
 
 # ===== 依赖注入 =====
 
-def get_admin_service() -> AdminService:
-    """获取AdminService实例（占位，实际使用依赖注入容器）"""
-    # TODO: 从依赖注入容器获取
-    raise NotImplementedError("需要配置依赖注入容器")
+@inject
+def get_admin_service(service: AdminService = Depends(Provide[Container.admin_service])) -> AdminService:
+    return service
 
 
-def get_current_admin_id() -> str:
-    """获取当前管理员ID（占位，实际从session/JWT获取）"""
-    # TODO: 从JWT token或session获取
-    return "admin"
+def get_current_admin_id(request: Request) -> str:
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="未认证")
+    token = auth.split(" ", 1)[1]
+    secret = os.getenv("JWT_SECRET")
+    if not secret:
+        raise HTTPException(status_code=500, detail="认证配置缺失")
+    try:
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
+        admin_id = payload.get("sub") or payload.get("admin_id")
+        if not admin_id:
+            raise HTTPException(status_code=401, detail="令牌无效")
+        return admin_id
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="令牌过期")
+    except Exception:
+        raise HTTPException(status_code=401, detail="令牌无效")
 
 
 # ===== API端点 =====
@@ -51,7 +69,21 @@ async def login(
     对应admin-server.js中的 POST /api/admin/login
     """
     result = await admin_service.login(request.username, request.password)
-    return result
+    if not result.get("success") or not result.get("admin"):
+        return result
+    admin = result["admin"]
+    secret = os.getenv("JWT_SECRET")
+    if not secret:
+        raise HTTPException(status_code=500, detail="认证配置缺失")
+    now = datetime.utcnow()
+    payload = {
+        "sub": admin.get("id"),
+        "role": admin.get("role"),
+        "exp": now + timedelta(hours=8),
+        "iat": now,
+    }
+    token = jwt.encode(payload, secret, algorithm="HS256")
+    return {"success": True, "admin": admin, "token": token}
 
 
 @router.get("/info")
@@ -179,7 +211,7 @@ async def delete_admin(
 
 # ===== 管理员列表API =====
 
-@router.get("s")  # 对应 /api/admins
+@router.get("/admins")
 async def get_all_admins(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
