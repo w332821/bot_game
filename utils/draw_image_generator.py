@@ -258,19 +258,19 @@ class DrawImageGenerator:
 
         # 计算图片高度
         row_count = len(draws) + 1  # +1 for header
-        image_height = row_count * self.image_height_per_row + self.padding * 2
+        image_height = row_count * self.row_height + self.padding * 2
 
         # 创建图片
-        image = Image.new('RGB', (self.image_width, image_height), color='white')
+        image = Image.new('RGB', (self.width, image_height), color='white')
         draw = ImageDraw.Draw(image)
 
         # 绘制标题
         title = "【六合彩开奖历史】"
         title_y = self.padding
-        draw.text((self.image_width // 2 - 120, title_y), title, fill='black', font=self.font)
+        draw.text((self.width // 2 - 120, title_y), title, fill='black', font=self.font)
 
         # 绘制表头
-        header_y = title_y + self.image_height_per_row
+        header_y = title_y + self.row_height
         headers = ["期号", "特码", "时间"]
         col_widths = [200, 150, 300]
         x_offset = self.padding
@@ -280,7 +280,7 @@ class DrawImageGenerator:
             x_offset += col_widths[i]
 
         # 绘制数据行
-        y_offset = header_y + self.image_height_per_row
+        y_offset = header_y + self.row_height
 
         for draw_data in draws:
             issue = str(draw_data.get('issue', 'N/A'))
@@ -301,7 +301,7 @@ class DrawImageGenerator:
                 draw.text((x_offset, y_offset), value, fill='black', font=self.font)
                 x_offset += col_widths[i]
 
-            y_offset += self.image_height_per_row
+            y_offset += self.row_height
 
         # 保存图片
         # 对应 Node.js: /root/yueliao-server/uploads/draw_{gameType}_{issue}.png

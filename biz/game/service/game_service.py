@@ -621,8 +621,10 @@ class GameService:
                 logger.error(f"⚠️ 发送积分名单失败: {str(e)}")
 
             # ==================== 消息6: 下注速查指南 ====================
-            # 对应 bot-server.js line 795-813
-            bet_guide_message = """番：3番300 → 命中结果号
+            # 根据游戏类型发送对应的玩法指南
+            if game_type == 'lucky8':
+                # 澳洲幸运8玩法指南 - 对应 bot-server.js line 795-813
+                bet_guide_message = """番：3番300 → 命中结果号
 
 念：1念2/300 → 首位赢、次位和局退本金
 
@@ -639,9 +641,16 @@ class GameService:
 特码：5特20或5.6/60 → 命中开奖号码1-20
 
 关键词：查(积分+流水)、流水(今日+累计盈亏)、取消(封盘前撤单)"""
+            else:  # liuhecai
+                # 六合彩玩法指南 - 只支持特码1-49
+                bet_guide_message = """特码：5特100或5/100 → 命中开奖号码1-49
+
+赔率：40倍
+
+关键词：查(积分+流水)、流水(今日+累计盈亏)、取消(封盘前撤单)"""
 
             await self.bot_client.send_message(chat_id, bet_guide_message)
-            logger.info(f"✅ 已发送下注速查指南")
+            logger.info(f"✅ 已发送下注速查指南 (game_type={game_type})")
 
             logger.info(f"✅ 开奖完成: 期号={issue}, 中奖={len([r for r in results if r['status'] == 'win'])}, 所有6条消息已发送")
 

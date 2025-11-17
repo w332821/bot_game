@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 class ChatService:
     """群聊服务"""
 
-    def __init__(self, chat_repo: ChatRepository):
+    def __init__(self, chat_repo: ChatRepository, scheduler=None):
         self.chat_repo = chat_repo
+        self.scheduler = scheduler  # 调度器引用,用于游戏类型切换时重启定时器
 
     async def get_chat(self, chat_id: str) -> Optional[Dict[str, Any]]:
         """获取群聊信息"""
@@ -96,6 +97,13 @@ class ChatService:
 
         if chat:
             logger.info(f"✅ 更新群聊 {chat_id} 游戏类型: {game_type}")
+
+            # 🔥 重启定时器,从旧游戏类型迁移到新游戏类型
+            if self.scheduler:
+                self.scheduler.restart_timer(chat_id, game_type)
+                logger.info(f"🔄 已重启定时器: {chat_id} -> {game_type}")
+            else:
+                logger.warning(f"⚠️ 未配置scheduler,无法自动重启定时器,需要手动重启应用")
 
         return chat
 

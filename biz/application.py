@@ -77,6 +77,9 @@ async def lifespan(app: FastAPI):
     scheduler = init_scheduler(game_service, bot_client)
     logger.info("✅ 开奖调度器已初始化")
 
+    # 将scheduler保存到container中,供其他服务使用
+    container.scheduler_instance = scheduler
+
     # 自动注册所有已存在的活跃群聊到调度器
     try:
         from biz.chat.repo.chat_repo import ChatRepository
@@ -152,8 +155,9 @@ app.add_middleware(RequestIDMiddleware)
 # 初始化依赖注入容器
 container = Container()
 
-# 导入Webhook路由
+# 导入路由
 from biz.game.webhook import webhook_api
+from biz.chat.api import chat_api
 
 # 使用FastAPI依赖覆盖机制
 app.dependency_overrides[webhook_api.get_game_service] = lambda: container.game_service()
@@ -161,12 +165,14 @@ app.dependency_overrides[webhook_api.get_user_service] = lambda: container.user_
 app.dependency_overrides[webhook_api.get_chat_repo] = lambda: container.chat_repo()
 app.dependency_overrides[webhook_api.get_bot_client] = lambda: container.bot_api_client()
 
-# 注册Webhook路由（不使用前缀，因为webhook路径是固定的）
-app.include_router(webhook_api.router)
+# 注册路由
+app.include_router(webhook_api.router)  # Webhook路由（不使用前缀）
+app.include_router(chat_api.router)  # Chat管理API
 
 # Wire依赖注入
 container.wire(modules=[
     "biz.game.webhook.webhook_api",
+    "biz.chat.api.chat_api",
 ])
 
 # 健康检查端点

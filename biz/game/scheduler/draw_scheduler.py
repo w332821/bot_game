@@ -354,15 +354,20 @@ class DrawScheduler:
         Args:
             chat_id: 群聊ID
         """
-        game_type = self.chat_game_types.get(chat_id, 'lucky8')
+        # 🔥 修复: 从所有游戏类型中移除该群聊(因为可能已经改了游戏类型)
+        removed_from = []
+        for game_type in ['lucky8', 'liuhecai']:
+            if chat_id in self.registered_chats_for_game_type[game_type]:
+                self.registered_chats_for_game_type[game_type].remove(chat_id)
+                removed_from.append(game_type)
+                logger.info(f"🔌 群聊 {chat_id} 已从 {game_type} 全局定时器移除")
 
-        if chat_id in self.registered_chats_for_game_type[game_type]:
-            self.registered_chats_for_game_type[game_type].remove(chat_id)
-            logger.info(f"🔌 群聊 {chat_id} 已从全局定时器移除")
+                # 如果该游戏类型没有其他群聊了，可以停止定时器（可选）
+                if len(self.registered_chats_for_game_type[game_type]) == 0:
+                    logger.info(f"   该游戏类型 {game_type} 没有其他群聊了")
 
-            # 如果该游戏类型没有其他群聊了，可以停止定时器（可选）
-            if len(self.registered_chats_for_game_type[game_type]) == 0:
-                logger.info(f"   该游戏类型 {game_type} 没有其他群聊了")
+        if not removed_from:
+            logger.warning(f"⚠️ 群聊 {chat_id} 未在任何游戏类型定时器中注册")
 
         # 清理锁定状态
         if chat_id in self.bet_lock_status:

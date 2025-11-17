@@ -31,10 +31,15 @@ class UpdateStatusRequest(BaseModel):
 
 # ===== 依赖注入 =====
 
-def get_chat_service() -> ChatService:
-    """获取ChatService实例（占位，实际使用依赖注入容器）"""
-    # TODO: 从依赖注入容器获取
-    raise NotImplementedError("需要配置依赖注入容器")
+from dependency_injector.wiring import inject, Provide
+from biz.containers import Container
+
+@inject
+def get_chat_service(
+    service: ChatService = Depends(Provide[Container.chat_service])
+) -> ChatService:
+    """获取ChatService实例"""
+    return service
 
 
 # ===== API端点 =====
