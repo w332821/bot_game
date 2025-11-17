@@ -271,7 +271,8 @@ class DrawRepository:
     async def get_recent_draws(
         self,
         chat_id: str,
-        limit: int = 15
+        limit: int = 15,
+        game_type: str = None
     ) -> List[Dict[str, Any]]:
         """
         获取最近N期开奖记录（兼容GameService）
@@ -279,21 +280,37 @@ class DrawRepository:
         Args:
             chat_id: 群聊ID
             limit: 数量限制
+            game_type: 游戏类型(可选,不传则查询所有类型)
 
         Returns:
             List[Dict]: 开奖记录列表
         """
         async with self._session_factory() as session:
-            query = text("""
-                SELECT * FROM draw_history
-                WHERE chat_id = :chat_id
-                ORDER BY timestamp DESC
-                LIMIT :limit
-            """)
-            result = await session.execute(query, {
-                "chat_id": chat_id,
-                "limit": limit
-            })
+            if game_type:
+                # 按游戏类型筛选
+                query = text("""
+                    SELECT * FROM draw_history
+                    WHERE chat_id = :chat_id AND game_type = :game_type
+                    ORDER BY timestamp DESC
+                    LIMIT :limit
+                """)
+                result = await session.execute(query, {
+                    "chat_id": chat_id,
+                    "game_type": game_type,
+                    "limit": limit
+                })
+            else:
+                # 查询所有类型
+                query = text("""
+                    SELECT * FROM draw_history
+                    WHERE chat_id = :chat_id
+                    ORDER BY timestamp DESC
+                    LIMIT :limit
+                """)
+                result = await session.execute(query, {
+                    "chat_id": chat_id,
+                    "limit": limit
+                })
             rows = result.fetchall()
             return [dict(row._mapping) for row in rows]
 

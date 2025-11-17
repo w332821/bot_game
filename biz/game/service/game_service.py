@@ -558,8 +558,8 @@ class GameService:
             # ==================== 消息3: 开奖图片 ====================
             # 对应 bot-server.js line 720-768
             try:
-                # 获取历史开奖记录用于生成图片
-                draw_history = await self.draw_repo.get_recent_draws(chat_id, limit=15)
+                # 获取历史开奖记录用于生成图片（按游戏类型筛选）
+                draw_history = await self.draw_repo.get_recent_draws(chat_id, limit=15, game_type=game_type)
 
                 if draw_history:
                     from utils import get_draw_image_generator
@@ -707,16 +707,16 @@ class GameService:
         try:
             logger.info(f"📜 查询开奖历史: 群={chat_id}")
 
-            # 获取最近15期开奖记录
-            draws = await self.draw_repo.get_recent_draws(chat_id, limit=15)
+            # 获取群聊游戏类型
+            chat = await self.chat_repo.get_by_id(chat_id)
+            game_type = chat.get('game_type', 'lucky8') if chat else 'lucky8'
+
+            # 获取最近15期开奖记录（按游戏类型筛选）
+            draws = await self.draw_repo.get_recent_draws(chat_id, limit=15, game_type=game_type)
 
             if not draws:
                 await self.bot_client.send_message(chat_id, "暂无开奖记录")
                 return
-
-            # 获取群聊游戏类型
-            chat = await self.chat_repo.get_by_id(chat_id)
-            game_type = chat.get('game_type', 'lucky8') if chat else 'lucky8'
 
             # 生成开奖历史图片
             from utils import get_draw_image_generator
