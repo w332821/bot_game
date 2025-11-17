@@ -518,9 +518,9 @@ def calculate_result(
             try:
                 draw_numbers = [int(n.strip()) for n in draw_code.split(',')]
                 if len(draw_numbers) >= 8:
-                    eighth_number = draw_numbers[7]  # 第8位（索引7）
+                    eighth_number = draw_numbers[7]
             except (ValueError, IndexError):
-                pass
+                logger.warning("解析特码失败")
 
         if eighth_number and eighth_number % 2 == 1:
             status = 'win'
@@ -536,9 +536,9 @@ def calculate_result(
             try:
                 draw_numbers = [int(n.strip()) for n in draw_code.split(',')]
                 if len(draw_numbers) >= 8:
-                    eighth_number = draw_numbers[7]  # 第8位（索引7）
+                    eighth_number = draw_numbers[7]
             except (ValueError, IndexError):
-                pass
+                logger.warning("解析特码失败")
 
         if eighth_number and eighth_number % 2 == 0:
             status = 'win'
@@ -554,9 +554,9 @@ def calculate_result(
             try:
                 draw_numbers = [int(n.strip()) for n in draw_code.split(',')]
                 if len(draw_numbers) >= 8:
-                    eighth_number = draw_numbers[7]  # 第8位（索引7）
+                    eighth_number = draw_numbers[7]
             except (ValueError, IndexError):
-                pass
+                logger.warning("解析特码失败")
 
         if eighth_number and bet['number'] == eighth_number:
             status = 'win'

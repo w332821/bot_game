@@ -728,8 +728,7 @@ class GameService:
             if image_path:
                 # 构建图片URL（与Node.js版本一致）
                 filename = os.path.basename(image_path)
-                # 假设图片在 /public/images/ 目录下
-                public_url = f"/public/images/{filename}"
+                public_url = f"/uploads/{filename}"
 
                 # 构建完整URL
                 image_host = os.getenv('IMAGE_HOST', 'myrepdemo.top')

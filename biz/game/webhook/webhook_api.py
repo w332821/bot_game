@@ -11,6 +11,8 @@ from biz.game.service.game_service import GameService
 from biz.user.service.user_service import UserService
 from biz.chat.repo.chat_repo import ChatRepository
 from external.bot_api_client import BotApiClient
+from dependency_injector.wiring import inject, Provide
+from biz.containers import Container
 from biz.game.scheduler import get_scheduler
 
 logger = logging.getLogger(__name__)
@@ -35,24 +37,24 @@ class SyncGameTypeRequest(BaseModel):
 
 # ===== 依赖注入占位符 =====
 
-def get_game_service() -> GameService:
-    """获取GameService（占位，由依赖注入容器提供）"""
-    raise NotImplementedError("需要配置依赖注入容器")
+@inject
+def get_game_service(service: GameService = Depends(Provide[Container.game_service])) -> GameService:
+    return service
 
 
-def get_user_service() -> UserService:
-    """获取UserService（占位，由依赖注入容器提供）"""
-    raise NotImplementedError("需要配置依赖注入容器")
+@inject
+def get_user_service(service: UserService = Depends(Provide[Container.user_service])) -> UserService:
+    return service
 
 
-def get_chat_repo() -> ChatRepository:
-    """获取ChatRepository（占位，由依赖注入容器提供）"""
-    raise NotImplementedError("需要配置依赖注入容器")
+@inject
+def get_chat_repo(repo: ChatRepository = Depends(Provide[Container.chat_repo])) -> ChatRepository:
+    return repo
 
 
-def get_bot_client() -> BotApiClient:
-    """获取BotApiClient（占位，由依赖注入容器提供）"""
-    raise NotImplementedError("需要配置依赖注入容器")
+@inject
+def get_bot_client(client: BotApiClient = Depends(Provide[Container.bot_api_client])) -> BotApiClient:
+    return client
 
 
 # ===== Webhook处理 =====
@@ -84,7 +86,7 @@ async def webhook(
 
         # 1. 处理群聊创建事件
         if event == 'group.created':
-            await handle_group_created(data, chat_repo, bot_client, game_service)
+            await handle_group_created(data, chat_repo, bot_client, game_service, user_service)
 
         # 2. 处理新成员加入事件
         elif event == 'member.joined':
@@ -105,7 +107,8 @@ async def handle_group_created(
     data: Dict[str, Any],
     chat_repo: ChatRepository,
     bot_client: BotApiClient,
-    game_service: GameService
+    game_service: GameService,
+    user_service: UserService
 ):
     """
     处理群聊创建事件
@@ -154,7 +157,16 @@ async def handle_group_created(
         if members_result.get('success'):
             members = members_result.get('members', [])
             logger.info(f"✅ 同步群聊成员: {len(members)} 个")
-            # TODO: 批量创建用户
+            for m in members:
+                mid = m.get('id') or m.get('_id')
+                mname = m.get('name') or m.get('username') or '用户'
+                if not m.get('isBot') and mid and mname:
+                    await user_service.get_or_create_user(
+                        user_id=mid,
+                        username=mname,
+                        chat_id=chat_id,
+                        balance=1000
+                    )
     except Exception as e:
         logger.error(f"⚠️ 同步群聊成员失败: {str(e)}")
 
@@ -255,17 +267,22 @@ async def handle_message_received(
     logger.info(f"收到消息: {sender_name} -> {chat.get('name')}: {content}")
 
     # 1. 确保群聊存在
-    existing_chat = await chat_repo.get_by_id(chat_id)
+    try:
+        existing_chat = await chat_repo.get_by_id(chat_id)
+    except Exception as e:
+        logger.warning(f"获取群聊信息失败: {str(e)}")
+        existing_chat = None
     if not existing_chat:
-        await chat_repo.create_chat({
-            'id': chat_id,
-            'name': chat.get('name'),
-            'game_type': 'lucky8',
-            'owner_id': None
-        })
-        logger.info(f"✅ 创建群聊: {chat.get('name')} ({chat_id})")
-
-        # 启动自动开奖定时器
+        try:
+            await chat_repo.create_chat({
+                'id': chat_id,
+                'name': chat.get('name'),
+                'game_type': 'lucky8',
+                'owner_id': None
+            })
+            logger.info(f"✅ 创建群聊: {chat.get('name')} ({chat_id})")
+        except Exception as e:
+            logger.warning(f"创建群聊失败: {str(e)}")
         scheduler = get_scheduler()
         if scheduler:
             scheduler.start_timer(chat_id, 'lucky8')
@@ -304,39 +321,11 @@ async def handle_message_received(
         await game_service.handle_draw_history(chat_id)
 
     else:
-        # 尝试解析为下注指令
-        from biz.game.logic import game_logic
-        from biz.odds.service.odds_service import OddsService
-
-        # TODO: 从依赖注入获取odds_service
-        # 临时创建一个空的service用于解析
-        class TempOddsService:
-            async def get_odds(self, bet_type, game_type):
-                return None
-
-        try:
-            bets = await game_logic.parse_bets(
-                message=content,
-                player=sender_name,
-                odds_service=TempOddsService(),
-                game_type=existing_chat['game_type'] if existing_chat else 'lucky8'
-            )
-
-            if bets:
-                # 检查是否锁定
-                scheduler = get_scheduler()
-                if scheduler and scheduler.is_bet_locked(chat_id):
-                    await bot_client.send_message(chat_id, f"@{sender_name} 🔒 已停止下注和取消操作，请等待开奖结果")
-                    return
-
-                # 是下注指令
-                await game_service.handle_bet_message(chat_id, message, sender)
-            else:
-                # 无效输入
-                await bot_client.send_message(chat_id, f"@{sender_name} 输入无效")
-
-        except Exception as e:
-            logger.error(f"❌ 解析消息失败: {str(e)}", exc_info=True)
+        scheduler = get_scheduler()
+        if scheduler and scheduler.is_bet_locked(chat_id):
+            await bot_client.send_message(chat_id, f"@{sender_name} 🔒 已停止下注和取消操作，请等待开奖结果")
+            return
+        await game_service.handle_bet_message(chat_id, message, sender)
 
 
 # ===== 同步游戏类型 =====
@@ -364,10 +353,10 @@ async def sync_game_type(
         logger.info(f"📢 收到游戏类型同步请求: {chat_id}")
         logger.info(f"   旧类型: {old_game_type} -> 新类型: {game_type}")
 
-        # 更新群聊的游戏类型
-        await chat_repo.update_game_type(chat_id, game_type)
-
-        # 更新定时器
+        try:
+            await chat_repo.update_game_type(chat_id, game_type)
+        except Exception as e:
+            logger.warning(f"更新群聊类型失败: {str(e)}")
         scheduler = get_scheduler()
         if scheduler:
             scheduler.restart_timer(chat_id, game_type)

@@ -119,7 +119,7 @@ class TestBetParsing:
         # 绿波
         result = game_service._parse_bet_message("绿波100", "liuhecai")
         assert result is not None
-        assert result['lottery_type'] == 'lvbo')
+        assert result['lottery_type'] == 'lvbo'
 
 
 class TestHandleQueryBalance:

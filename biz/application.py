@@ -113,6 +113,13 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ 自动注册群聊失败: {str(e)}", exc_info=True)
         logger.warning("⚠️ 定时器未启动，需要等待群聊事件触发")
 
+    # 启动历史开奖定期同步（每60分钟一次）
+    try:
+        scheduler.start_history_sync(draw_repo=container.draw_repo(), draw_client=draw_client, interval_minutes=60)
+        logger.info("✅ 历史开奖定期同步任务已启动（60分钟）")
+    except Exception as e:
+        logger.warning(f"⚠️ 历史开奖同步任务启动失败: {str(e)}")
+
     yield
 
     # 关闭时

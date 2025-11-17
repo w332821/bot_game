@@ -59,6 +59,90 @@ class DrawScheduler:
         # 群聊游戏类型映射
         self.chat_game_types: Dict[str, str] = {}
 
+        # 历史开奖同步任务
+        self._history_sync_task: Optional[asyncio.Task] = None
+        self._history_sync_interval_minutes: int = 60
+
+    def start_history_sync(self, draw_repo, draw_client, interval_minutes: int = 60):
+        """
+        启动历史开奖定期同步任务（按游戏类型补齐缺口并重试）
+
+        Args:
+            draw_repo: DrawRepository 实例
+            draw_client: DrawApiClient 实例
+            interval_minutes: 同步间隔（分钟）
+        """
+        if self._history_sync_task is not None:
+            logger.warning("⚠️ 历史同步任务已运行，跳过重复启动")
+            return
+
+        self._history_sync_interval_minutes = interval_minutes
+
+        async def _loop():
+            # 首次延迟，避免与应用启动阶段竞争资源
+            await asyncio.sleep(self._history_sync_interval_minutes * 60)
+            while True:
+                try:
+                    await self._history_sync_once(draw_repo, draw_client)
+                except Exception as e:
+                    logger.error(f"❌ 历史开奖同步失败: {str(e)}", exc_info=True)
+                finally:
+                    await asyncio.sleep(self._history_sync_interval_minutes * 60)
+
+        self._history_sync_task = asyncio.create_task(_loop())
+        logger.info(f"🔄 历史开奖同步任务已启动（间隔 {interval_minutes} 分钟）")
+
+    async def _history_sync_once(self, draw_repo, draw_client):
+        """
+        执行一次历史开奖同步：对 lucky8 和 liuhecai 分别补齐最近记录
+        """
+        for game_type in ['lucky8', 'liuhecai']:
+            try:
+                # 刷新外部数据缓存
+                if game_type == 'lucky8':
+                    await draw_client.fetch_lucky8_results()
+                else:
+                    await draw_client.fetch_draw_results()
+
+                recent = await draw_client.get_recent_draws(game_type, limit=50)
+                if not recent:
+                    logger.warning(f"⚠️ 无{game_type}历史数据可同步")
+                    continue
+
+                inserted = 0
+                for item in recent:
+                    issue = item.get('issue')
+                    if not issue:
+                        continue
+
+                    # 仅使用系统级别历史（避免为每个群重复写入）
+                    exists = await draw_repo.exists_issue(issue, game_type=game_type, chat_id='system')
+                    if exists:
+                        continue
+
+                    # 构造写入数据
+                    draw_data = {
+                        'chat_id': 'system',
+                        'game_type': game_type,
+                        'issue': issue,
+                        # lucky8: draw_number 是番数；liuhecai: draw_number 是特码
+                        'draw_number': int(str(item.get('draw_number'))) if item.get('draw_number') is not None else None,
+                        'draw_code': item.get('draw_code'),
+                        'special_number': item.get('special_number'),
+                        'draw_time': datetime.now()
+                    }
+
+                    try:
+                        await draw_repo.create(draw_data)
+                        inserted += 1
+                    except Exception as e:
+                        logger.warning(f"写入{game_type}历史失败(issue={issue}): {str(e)}")
+
+                logger.info(f"📚 {game_type} 历史同步完成，本次新增 {inserted} 条")
+
+            except Exception as e:
+                logger.error(f"❌ {game_type} 历史同步异常: {str(e)}", exc_info=True)
+
     def get_draw_interval(self, game_type: str) -> int:
         """
         获取开奖间隔（秒）
@@ -487,6 +571,14 @@ class DrawScheduler:
         # 清理所有状态
         self.bet_lock_status.clear()
         self.chat_game_types.clear()
+
+        # 停止历史同步
+        if self._history_sync_task:
+            try:
+                self._history_sync_task.cancel()
+            except Exception:
+                pass
+            self._history_sync_task = None
 
         logger.info(f"✅ 所有定时器已停止")
 
