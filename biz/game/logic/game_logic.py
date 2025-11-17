@@ -610,7 +610,12 @@ async def validate_bet(
         return False, "❌ 投注金额必须大于0"
 
     # 4. 赔率配置验证（检查投注限额）
-    validation = await odds_service.validate_bet_amount(bet_type, amount, game_type)
+    # 对于特码，需要根据游戏类型使用正确的 bet_type
+    query_bet_type = bet_type
+    if bet_type == 'tema':
+        query_bet_type = 'tema_lucky8' if game_type == 'lucky8' else 'tema_liuhecai'
+
+    validation = await odds_service.validate_bet_amount(query_bet_type, amount, game_type)
     if not validation['valid']:
         return False, f"❌ {validation['error']}"
 
