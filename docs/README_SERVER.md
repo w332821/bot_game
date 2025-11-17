@@ -156,10 +156,10 @@ source ~/.bashrc
 
 ## 📚 相关文档
 
-- `PM2_GUIDE.md` - PM2详细使用指南
-- `README.md` - 项目完整说明
-- `QUICKSTART.md` - 快速开始
-- `CLAUDE.md` - AI开发说明
+- PM2_GUIDE.md - PM2详细使用指南
+- README.md - 项目完整说明
+- QUICKSTART.md - 快速开始
+- CLAUDE.md - AI开发说明
 
 ---
 

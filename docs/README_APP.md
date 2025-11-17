@@ -84,10 +84,10 @@ open http://localhost:3003/docs
 
 | 文档 | 说明 |
 |------|------|
-| [APP_ENDPOINTS.md](./APP_ENDPOINTS.md) | API端点详细文档、测试指南 |
-| [APP_IMPLEMENTATION_STATUS.md](./APP_IMPLEMENTATION_STATUS.md) | 实现状态、代码统计、配置说明 |
-| [WEBHOOK_SPEC.md](./WEBHOOK_SPEC.md) | Webhook规范文档 |
-| [CLAUDE.md](./CLAUDE.md) | 项目架构说明 |
+| APP_ENDPOINTS.md | API端点详细文档、测试指南 |
+| APP_IMPLEMENTATION_STATUS.md | 实现状态、代码统计、配置说明 |
+| WEBHOOK_SPEC.md | Webhook规范文档 |
+| CLAUDE.md | 项目架构说明 |
 
 ---
 
