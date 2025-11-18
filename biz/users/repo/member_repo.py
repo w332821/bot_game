@@ -195,8 +195,8 @@ class MemberRepository:
             # 创建 member profile（扩展信息，包含密码）
             member_query = text(
                 """
-                INSERT INTO member_profiles (user_id, account, password, plate, superior_account, company_remarks)
-                VALUES (:user_id, :account, :password, :plate, :superior_account, :company_remarks)
+                INSERT INTO member_profiles (user_id, account, password, plate, superior_account, company_remarks, open_time, created_at)
+                VALUES (:user_id, :account, :password, :plate, :superior_account, :company_remarks, NOW(), NOW())
                 """
             )
             await session.execute(member_query, {
