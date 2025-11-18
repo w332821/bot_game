@@ -75,7 +75,7 @@ class AgentRepository:
             online_filter = (
                 "AND EXISTS ("
                 "SELECT 1 FROM online_status os "
-                "WHERE BINARY os.user_id = BINARY u.id "
+                "WHERE CAST(os.user_id AS CHAR) = CAST(u.id AS CHAR) "
                 "AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)"
                 ")"
             )
@@ -87,10 +87,10 @@ class AgentRepository:
                        ap.open_time, ap.superior_account,
                        CASE WHEN EXISTS (
                            SELECT 1 FROM online_status os
-                           WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
+                           WHERE CAST(os.user_id AS CHAR) = CAST(u.id AS CHAR) AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
                        ) THEN 1 ELSE 0 END AS online
                 FROM agent_profiles ap
-                JOIN users u ON BINARY u.id = BINARY ap.user_id
+                JOIN users u ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
                 WHERE {' AND '.join(where)} {online_filter}
                 ORDER BY ap.open_time DESC
                 LIMIT :limit OFFSET :offset
@@ -103,7 +103,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM agent_profiles ap
-                JOIN users u ON BINARY u.id = BINARY ap.user_id
+                JOIN users u ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
                 WHERE {' AND '.join(where)} {online_filter}
                 """
             )
@@ -142,7 +142,7 @@ class AgentRepository:
                        ap.default_rebate_plate, ap.invite_code, ap.promotion_domains,
                        ap.company_remarks, ap.open_time
                 FROM agent_profiles ap
-                JOIN users u ON BINARY u.id = BINARY ap.user_id
+                JOIN users u ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
                 WHERE ap.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
                 """
@@ -256,7 +256,7 @@ class AgentRepository:
 
         online_filter = ""
         if show_online:
-            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
+            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE CAST(os.user_id AS CHAR) = CAST(u.id AS CHAR) AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
 
         async with self._session_factory() as session:
             query = text(
@@ -264,10 +264,10 @@ class AgentRepository:
                 SELECT mp.id, mp.account, u.balance, mp.plate, mp.open_time, mp.superior_account,
                        CASE WHEN EXISTS (
                            SELECT 1 FROM online_status os
-                           WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
+                           WHERE CAST(os.user_id AS CHAR) = CAST(u.id AS CHAR) AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
                        ) THEN 1 ELSE 0 END AS online
                 FROM member_profiles mp
-                JOIN users u ON BINARY u.id = BINARY mp.user_id
+                JOIN users u ON CAST(u.id AS CHAR) = CAST(mp.user_id AS CHAR)
                 WHERE {' AND '.join(where)} {online_filter}
                 ORDER BY mp.open_time DESC
                 LIMIT :limit OFFSET :offset
@@ -280,7 +280,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM member_profiles mp
-                JOIN users u ON BINARY u.id = BINARY mp.user_id
+                JOIN users u ON CAST(u.id AS CHAR) = CAST(mp.user_id AS CHAR)
                 WHERE {' AND '.join(where)} {online_filter}
                 """
             )
@@ -480,7 +480,7 @@ class AgentRepository:
                 SELECT t.id, t.transaction_no, t.transaction_type, t.amount,
                        t.balance_before, t.balance_after, t.transaction_time, t.remarks
                 FROM transactions t
-                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY t.user_id
+                JOIN agent_profiles ap ON CAST(ap.user_id AS CHAR) = CAST(t.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
                 ORDER BY t.transaction_time DESC
                 LIMIT :limit OFFSET :offset
@@ -508,7 +508,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM transactions t
-                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY t.user_id
+                JOIN agent_profiles ap ON CAST(ap.user_id AS CHAR) = CAST(t.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
                 """
             )
@@ -520,7 +520,7 @@ class AgentRepository:
                 f"""
                 SELECT COALESCE(SUM(t.amount), 0) AS total_amount
                 FROM transactions t
-                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY t.user_id
+                JOIN agent_profiles ap ON CAST(ap.user_id AS CHAR) = CAST(t.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
                 LIMIT :limit OFFSET :offset
                 """
@@ -569,7 +569,7 @@ class AgentRepository:
                 SELECT ac.id, ac.change_type, ac.amount, ac.balance_before,
                        ac.balance_after, ac.change_time, ac.remarks
                 FROM account_changes ac
-                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY ac.user_id
+                JOIN agent_profiles ap ON CAST(ap.user_id AS CHAR) = CAST(ac.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
                 ORDER BY ac.change_time DESC
                 LIMIT :limit OFFSET :offset
@@ -596,7 +596,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM account_changes ac
-                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY ac.user_id
+                JOIN agent_profiles ap ON CAST(ap.user_id AS CHAR) = CAST(ac.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
                 """
             )

@@ -31,15 +31,28 @@ def mock_bot_client():
 
 
 @pytest.fixture
-def game_service(mock_repos, mock_bot_client):
+def mock_user_service():
+    """创建mock UserService"""
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_odds_service():
+    """创建mock OddsService"""
+    return AsyncMock()
+
+
+@pytest.fixture
+def game_service(mock_repos, mock_bot_client, mock_user_service, mock_odds_service):
     """创建GameService实例"""
     return GameService(
+        user_service=mock_user_service,
         user_repo=mock_repos['user_repo'],
         bet_repo=mock_repos['bet_repo'],
         chat_repo=mock_repos['chat_repo'],
         draw_repo=mock_repos['draw_repo'],
-        odds_repo=mock_repos['odds_repo'],
-        bot_client=mock_bot_client
+        odds_service=mock_odds_service,
+        bot_api_client=mock_bot_client
     )
 
 

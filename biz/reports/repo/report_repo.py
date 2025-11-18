@@ -139,7 +139,7 @@ class ReportRepository:
                     COALESCE(SUM(b.rebate), 0) as rebate,
                     COALESCE(SUM(b.bet_result), 0) as win_loss
                 FROM bet_orders b
-                LEFT JOIN member_profiles m ON BINARY b.user_id = BINARY m.user_id
+                LEFT JOIN member_profiles m ON CAST(b.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
                 GROUP BY m.account, m.name, b.bet_type
                 LIMIT :page_size OFFSET :offset
@@ -171,7 +171,7 @@ class ReportRepository:
             count_query = text(f"""
                 SELECT COUNT(DISTINCT CONCAT(m.account, '-', b.bet_type))
                 FROM bet_orders b
-                LEFT JOIN member_profiles m ON BINARY b.user_id = BINARY m.user_id
+                LEFT JOIN member_profiles m ON CAST(b.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
             """)
 
@@ -190,7 +190,7 @@ class ReportRepository:
                     COALESCE(SUM(b.rebate), 0) as total_rebate,
                     COALESCE(SUM(b.bet_result), 0) as total_win_loss
                 FROM bet_orders b
-                LEFT JOIN member_profiles m ON BINARY b.user_id = BINARY m.user_id
+                LEFT JOIN member_profiles m ON CAST(b.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
             """)
 
@@ -251,7 +251,7 @@ class ReportRepository:
                     COALESCE(SUM(b.rebate), 0) as rebate,
                     COALESCE(SUM(b.bet_result), 0) as win_loss
                 FROM bet_orders b
-                LEFT JOIN member_profiles m ON b.user_id = m.user_id
+                LEFT JOIN member_profiles m ON CAST(b.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
                 GROUP BY m.account, m.name, b.bet_type
                 LIMIT :page_size OFFSET :offset
@@ -286,7 +286,7 @@ class ReportRepository:
             count_query = text(f"""
                 SELECT COUNT(DISTINCT CONCAT(m.account, '-', b.bet_type))
                 FROM bet_orders b
-                LEFT JOIN member_profiles m ON b.user_id = m.user_id
+                LEFT JOIN member_profiles m ON CAST(b.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
             """)
 
@@ -330,7 +330,7 @@ class ReportRepository:
                     t.status,
                     t.processor
                 FROM transactions t
-                LEFT JOIN member_profiles m ON BINARY t.user_id = BINARY m.user_id
+                LEFT JOIN member_profiles m ON CAST(t.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
                 ORDER BY t.transaction_time DESC
                 LIMIT :page_size OFFSET :offset
@@ -359,7 +359,7 @@ class ReportRepository:
             count_query = text(f"""
                 SELECT COUNT(*)
                 FROM transactions t
-                LEFT JOIN member_profiles m ON BINARY t.user_id = BINARY m.user_id
+                LEFT JOIN member_profiles m ON CAST(t.user_id AS CHAR) = CAST(m.user_id AS CHAR)
                 {where_clause}
             """)
 

@@ -12,9 +12,9 @@ class TestFinancialSummary:
     """测试财务总报表接口"""
 
     @pytest.mark.asyncio
-    async def test_financial_summary_success(self):
+    async def test_financial_summary_success(self, auth_headers):
         """测试财务总报表查询成功"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/financial-summary",
@@ -38,9 +38,9 @@ class TestFinancialSummary:
                 assert field in data["data"]
 
     @pytest.mark.asyncio
-    async def test_financial_summary_with_plate(self):
+    async def test_financial_summary_with_plate(self, auth_headers):
         """测试财务总报表 - 带盘口筛选"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/financial-summary",
@@ -56,9 +56,9 @@ class TestFinancialSummary:
             assert data["code"] == 200
 
     @pytest.mark.asyncio
-    async def test_financial_summary_invalid_plate(self):
+    async def test_financial_summary_invalid_plate(self, auth_headers):
         """测试财务总报表 - 无效盘口"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/financial-summary",
@@ -77,9 +77,9 @@ class TestFinancialReport:
     """测试财务报表接口(含跨页统计)"""
 
     @pytest.mark.asyncio
-    async def test_financial_report_pagination(self):
+    async def test_financial_report_pagination(self, auth_headers):
         """测试财务报表分页"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/financial",
@@ -105,9 +105,9 @@ class TestFinancialReport:
             assert "crossPageStats" in data["data"]
 
     @pytest.mark.asyncio
-    async def test_financial_report_cross_page_stats(self):
+    async def test_financial_report_cross_page_stats(self, auth_headers):
         """测试财务报表跨页统计字段"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/financial",
@@ -132,9 +132,9 @@ class TestFinancialReport:
                 assert field in cross_stats
 
     @pytest.mark.asyncio
-    async def test_financial_report_with_account_filter(self):
+    async def test_financial_report_with_account_filter(self, auth_headers):
         """测试财务报表 - 账号筛选"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/financial",
@@ -158,7 +158,7 @@ class TestWinLossReport:
     @pytest.mark.asyncio
     async def test_win_loss_report_basic(self):
         """测试输赢报表基本查询"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/win-loss",
@@ -179,7 +179,7 @@ class TestWinLossReport:
     @pytest.mark.asyncio
     async def test_win_loss_report_with_valid_game_types(self):
         """测试输赢报表 - 有效的游戏类型(中文)"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/win-loss",
@@ -197,9 +197,9 @@ class TestWinLossReport:
             assert data["code"] == 200
 
     @pytest.mark.asyncio
-    async def test_win_loss_report_with_invalid_game_type(self):
+    async def test_win_loss_report_with_invalid_game_type(self, auth_headers):
         """测试输赢报表 - 无效的游戏类型(英文)"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/win-loss",
@@ -222,9 +222,9 @@ class TestAgentWinLossReport:
     """测试代理输赢报表接口"""
 
     @pytest.mark.asyncio
-    async def test_agent_win_loss_report_basic(self):
+    async def test_agent_win_loss_report_basic(self, auth_headers):
         """测试代理输赢报表基本查询"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/agent-win-loss",
@@ -245,9 +245,9 @@ class TestDepositWithdrawalReport:
     """测试存取款报表接口"""
 
     @pytest.mark.asyncio
-    async def test_deposit_withdrawal_report_all(self):
+    async def test_deposit_withdrawal_report_all(self, auth_headers):
         """测试存取款报表 - 全部"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/deposit-withdrawal",
@@ -266,7 +266,7 @@ class TestDepositWithdrawalReport:
     @pytest.mark.asyncio
     async def test_deposit_withdrawal_report_deposit_only(self):
         """测试存取款报表 - 仅存款"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/deposit-withdrawal",
@@ -286,7 +286,7 @@ class TestDepositWithdrawalReport:
     @pytest.mark.asyncio
     async def test_deposit_withdrawal_report_withdrawal_only(self):
         """测试存取款报表 - 仅取款"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/deposit-withdrawal",
@@ -310,7 +310,7 @@ class TestCategoryReport:
     @pytest.mark.asyncio
     async def test_category_report_basic(self):
         """测试分类报表基本查询"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/category",
@@ -329,7 +329,7 @@ class TestCategoryReport:
     @pytest.mark.asyncio
     async def test_category_report_with_lottery_type(self):
         """测试分类报表 - 指定彩种"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/category",
@@ -347,9 +347,9 @@ class TestCategoryReport:
             assert data["code"] == 200
 
     @pytest.mark.asyncio
-    async def test_category_report_invalid_lottery_type(self):
+    async def test_category_report_invalid_lottery_type(self, auth_headers):
         """测试分类报表 - 无效彩种"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/category",
@@ -373,7 +373,7 @@ class TestDownlineDetailsReport:
     @pytest.mark.asyncio
     async def test_downline_details_special_structure(self):
         """测试下线明细报表 - 特殊结构"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             response = await client.get(
                 "/api/reports/downline-details",
                 params={
@@ -412,7 +412,7 @@ class TestRecalculateFinancialSummary:
     @pytest.mark.asyncio
     async def test_recalculate_success(self):
         """测试重新统计成功"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.post(
                 "/api/reports/financial-summary/recalculate",
@@ -432,9 +432,9 @@ class TestExportCSV:
     """测试CSV导出接口"""
 
     @pytest.mark.asyncio
-    async def test_export_financial_csv(self):
+    async def test_export_financial_csv(self, auth_headers):
         """测试导出财务报表CSV"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/export/financial",
@@ -451,9 +451,9 @@ class TestExportCSV:
             assert "financial_" in response.headers["Content-Disposition"]
 
     @pytest.mark.asyncio
-    async def test_export_win_loss_csv(self):
+    async def test_export_win_loss_csv(self, auth_headers):
         """测试导出输赢报表CSV"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/export/win-loss",
@@ -467,9 +467,9 @@ class TestExportCSV:
             assert "text/csv" in response.headers.get("content-type", "")
 
     @pytest.mark.asyncio
-    async def test_export_invalid_type(self):
+    async def test_export_invalid_type(self, auth_headers):
         """测试导出无效类型"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
             response = await client.get(
                 "/api/reports/export/invalid_type",
@@ -488,9 +488,9 @@ class TestReportResponseFormat:
     """测试报表接口响应格式一致性"""
 
     @pytest.mark.asyncio
-    async def test_all_reports_use_unified_response_format(self):
+    async def test_all_reports_use_unified_response_format(self, auth_headers):
         """测试所有报表使用统一响应格式"""
-        async with AsyncClient(app=app, base_url="http://test") as client:
+        async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
 
             # 测试所有非导出接口

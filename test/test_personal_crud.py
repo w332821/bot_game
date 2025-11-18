@@ -348,7 +348,7 @@ class TestPasswordUpdate:
 
         # Verify
         assert result is True
-        mock_repo.update_password.assert_called_once_with("agent001", "oldpass123", "newpass456")
+        mock_repo.update_password.assert_called_once_with("agent001", "oldpass123", "newpass456", "agent")
 
     @pytest.mark.asyncio
     async def test_update_password_invalid_length(self):

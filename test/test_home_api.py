@@ -21,10 +21,10 @@ def _insert_online_metrics(metric_date: str):
         conn.execute(text("INSERT INTO online_metrics(metric_date, time_slot, web_count, app_count, total_count, created_at) VALUES(:d,'00:30',6,4,10,NOW())"), {"d": metric_date})
 
 @pytest.mark.asyncio
-async def test_home_online_count():
+async def test_home_online_count(auth_headers):
     _insert_online_status()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        r = await client.get("/api/home/online-count", params={"windowMinutes": 5})
+        r = await client.get("/api/home/online-count", params={"windowMinutes": 5}, headers=auth_headers)
     assert r.status_code == 200
     body = r.json()
     assert body["code"] == 200
@@ -32,11 +32,11 @@ async def test_home_online_count():
     assert data["total"] >= 2
 
 @pytest.mark.asyncio
-async def test_home_online_trend():
+async def test_home_online_trend(auth_headers):
     metric_date = "2025-11-10"
     _insert_online_metrics(metric_date)
     async with AsyncClient(app=app, base_url="http://test") as client:
-        r = await client.get("/api/home/online-trend", params={"date": metric_date})
+        r = await client.get("/api/home/online-trend", params={"date": metric_date}, headers=auth_headers)
     assert r.status_code == 200
     body = r.json()
     assert body["code"] == 200

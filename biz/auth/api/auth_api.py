@@ -58,110 +58,102 @@ async def login(
         - message: 提示消息
         - data: 用户信息 { user: { id, account, userType }, token }
     """
-    try:
-        # 先尝试管理员登录
-        result = await admin_service.login(request.account, request.password)
+    # 先尝试管理员登录
+    result = await admin_service.login(request.account, request.password)
 
-        if result.get('success'):
-            # 管理员登录成功
-            admin_data = result.get('admin', {})
-            token = create_access_token({
-                "admin_id": admin_data.get('id'),
-                "username": admin_data.get('username'),
-                "role": admin_data.get('role', 'admin')
-            })
+    if result.get('success'):
+        # 管理员登录成功
+        admin_data = result.get('admin', {})
+        token = create_access_token({
+            "admin_id": admin_data.get('id'),
+            "username": admin_data.get('username'),
+            "role": admin_data.get('role', 'admin')
+        })
 
-            return success_response(
-                data={
-                    "user": {
-                        "id": admin_data.get('id'),
-                        "account": admin_data.get('username'),
-                        "userType": admin_data.get('role', 'admin')
-                    },
-                    "token": token
+        return success_response(
+            data={
+                "user": {
+                    "id": admin_data.get('id'),
+                    "account": admin_data.get('username'),
+                    "userType": admin_data.get('role', 'admin')
                 },
-                message="登录成功"
-            )
-
-        # 尝试代理/会员登录
-        async with session_factory() as session:
-            # 查询代理账号
-            agent_query = text("""
-                SELECT id, user_id, account, password
-                FROM agent_profiles
-                WHERE account COLLATE utf8mb4_unicode_ci = :account
-                LIMIT 1
-            """)
-            result = await session.execute(agent_query, {"account": request.account})
-            agent_row = result.fetchone()
-
-            if agent_row and agent_row.password:
-                # 验证代理密码
-                if bcrypt.checkpw(request.password.encode('utf-8'), agent_row.password.encode('utf-8')):
-                    token = create_access_token({
-                        "user_id": agent_row.user_id,
-                        "profile_id": agent_row.id,
-                        "account": agent_row.account,
-                        "role": "agent"
-                    })
-
-                    return success_response(
-                        data={
-                            "user": {
-                                "id": agent_row.user_id,
-                                "account": agent_row.account,
-                                "userType": "agent"
-                            },
-                            "token": token
-                        },
-                        message="登录成功"
-                    )
-
-            # 查询会员账号
-            member_query = text("""
-                SELECT id, user_id, account, password
-                FROM member_profiles
-                WHERE account COLLATE utf8mb4_unicode_ci = :account
-                LIMIT 1
-            """)
-            result = await session.execute(member_query, {"account": request.account})
-            member_row = result.fetchone()
-
-            if member_row and member_row.password:
-                # 验证会员密码
-                if bcrypt.checkpw(request.password.encode('utf-8'), member_row.password.encode('utf-8')):
-                    token = create_access_token({
-                        "user_id": member_row.user_id,
-                        "profile_id": member_row.id,
-                        "account": member_row.account,
-                        "role": "member"
-                    })
-
-                    return success_response(
-                        data={
-                            "user": {
-                                "id": member_row.user_id,
-                                "account": member_row.account,
-                                "userType": "member"
-                            },
-                            "token": token
-                        },
-                        message="登录成功"
-                    )
-
-        # 所有登录尝试失败
-        return error_response(
-            code=ErrorCode.ACCOUNT_OR_PASSWORD_ERROR,
-            message="账号或密码错误",
-            data=None
+                "token": token
+            },
+            message="登录成功"
         )
 
-    except Exception as e:
-        return error_response(
-            code=ErrorCode.INTERNAL_ERROR,
-            message=f"登录失败: {str(e)}",
-            data=None
-        )
+    # 尝试代理/会员登录
+    async with session_factory() as session:
+        # 查询代理账号
+        agent_query = text("""
+            SELECT id, user_id, account, password
+            FROM agent_profiles
+            WHERE account COLLATE utf8mb4_unicode_ci = :account
+            LIMIT 1
+        """)
+        result = await session.execute(agent_query, {"account": request.account})
+        agent_row = result.fetchone()
+
+        if agent_row and agent_row.password:
+            # 验证代理密码
+            if bcrypt.checkpw(request.password.encode('utf-8'), agent_row.password.encode('utf-8')):
+                token = create_access_token({
+                    "user_id": agent_row.user_id,
+                    "profile_id": agent_row.id,
+                    "account": agent_row.account,
+                    "role": "agent"
+                })
+
+                return success_response(
+                    data={
+                        "user": {
+                            "id": agent_row.user_id,
+                            "account": agent_row.account,
+                            "userType": "agent"
+                        },
+                        "token": token
+                    },
+                    message="登录成功"
+                )
+
+        # 查询会员账号
+        member_query = text("""
+            SELECT id, user_id, account, password
+            FROM member_profiles
+            WHERE account COLLATE utf8mb4_unicode_ci = :account
+            LIMIT 1
+        """)
+        result = await session.execute(member_query, {"account": request.account})
+        member_row = result.fetchone()
+
+        if member_row and member_row.password:
+            # 验证会员密码
+            if bcrypt.checkpw(request.password.encode('utf-8'), member_row.password.encode('utf-8')):
+                token = create_access_token({
+                    "user_id": member_row.user_id,
+                    "profile_id": member_row.id,
+                    "account": member_row.account,
+                    "role": "member"
+                })
+
+                return success_response(
+                    data={
+                        "user": {
+                            "id": member_row.user_id,
+                            "account": member_row.account,
+                            "userType": "member"
+                        },
+                        "token": token
+                    },
+                    message="登录成功"
+                )
+
+    # 所有登录尝试失败
+    return error_response(
+        code=ErrorCode.ACCOUNT_OR_PASSWORD_ERROR,
+        message="账号或密码错误",
+        data=None
+    )
 
 
 @router.post("/logout")

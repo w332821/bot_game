@@ -18,10 +18,10 @@ def _seed_members():
         conn.execute(text("INSERT INTO login_logs(account, login_time, ip_address, ip_location, operator, created_at) VALUES('a2356a',NOW(),'223.104.76.98','中国-广州-广东','移动',NOW())"))
 
 @pytest.mark.asyncio
-async def test_members_list():
+async def test_members_list(auth_headers):
     _seed_members()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        r = await client.get("/api/users/members", params={"page": 1, "pageSize": 10})
+        r = await client.get("/api/users/members", params={"page": 1, "pageSize": 10}, headers=auth_headers)
     assert r.status_code == 200
     body = r.json()
     assert body["code"] == 200
@@ -30,16 +30,16 @@ async def test_members_list():
     assert data["total"] >= 2
 
 @pytest.mark.asyncio
-async def test_member_detail_and_login_log():
+async def test_member_detail_and_login_log(auth_headers):
     _seed_members()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        r = await client.get("/api/users/members/a2356a")
+        r = await client.get("/api/users/members/a2356a", headers=auth_headers)
         assert r.status_code == 200
         b = r.json()
         assert b["code"] == 200
         d = b["data"]
         assert d["account"] == "a2356a"
-        r2 = await client.get("/api/users/members/a2356a/login-log", params={"page": 1, "pageSize": 10})
+        r2 = await client.get("/api/users/members/a2356a/login-log", params={"page": 1, "pageSize": 10}, headers=auth_headers)
         assert r2.status_code == 200
         b2 = r2.json()
         assert b2["code"] == 200

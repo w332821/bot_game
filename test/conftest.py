@@ -154,5 +154,25 @@ def valid_plates():
     return ["A", "B", "C", "D"]
 
 
+@pytest.fixture
+def auth_token():
+    """生成测试用JWT token"""
+    from biz.auth.utils.jwt_utils import create_access_token
+    token = create_access_token({
+        "admin_id": "test_admin_001",
+        "username": "test_admin",
+        "role": "admin"
+    })
+    return token
+
+
+@pytest.fixture
+def auth_headers(auth_token):
+    """生成包含JWT token的请求headers"""
+    return {
+        "Authorization": f"Bearer {auth_token}"
+    }
+
+
 # 设置环境变量,避免在测试时启动调度器
 os.environ["PYTEST_CURRENT_TEST"] = "true"

@@ -35,8 +35,8 @@ class PersonalRepository:
                     ap.subordinate_transfer,
                     ap.default_rebate_plate
                 FROM users u
-                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
-                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
+                LEFT JOIN agent_profiles ap ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
+                LEFT JOIN member_profiles mp ON CAST(u.id AS CHAR) = CAST(mp.user_id AS CHAR)
                 WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
@@ -94,8 +94,8 @@ class PersonalRepository:
                     u.id,
                     CASE WHEN ap.id IS NOT NULL THEN 'agent' ELSE 'member' END as userType
                 FROM users u
-                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
-                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
+                LEFT JOIN agent_profiles ap ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
+                LEFT JOIN member_profiles mp ON CAST(u.id AS CHAR) = CAST(mp.user_id AS CHAR)
                 WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
@@ -249,8 +249,8 @@ class PersonalRepository:
             user_query = text("""
                 SELECT u.id
                 FROM users u
-                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
-                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
+                LEFT JOIN agent_profiles ap ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
+                LEFT JOIN member_profiles mp ON CAST(u.id AS CHAR) = CAST(mp.user_id AS CHAR)
                 WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
@@ -296,8 +296,8 @@ class PersonalRepository:
             user_query = text("""
                 SELECT u.id
                 FROM users u
-                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
-                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
+                LEFT JOIN agent_profiles ap ON CAST(u.id AS CHAR) = CAST(ap.user_id AS CHAR)
+                LEFT JOIN member_profiles mp ON CAST(u.id AS CHAR) = CAST(mp.user_id AS CHAR)
                 WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
