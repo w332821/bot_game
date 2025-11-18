@@ -64,3 +64,35 @@ def get_error_message(code: int, default: str = "未知错误") -> str:
         str: 错误消息
     """
     return ERROR_MESSAGES.get(code, default)
+
+
+def get_http_status_code(error_code: int) -> int:
+    """
+    将自定义错误码映射到HTTP状态码
+
+    Args:
+        error_code: 自定义错误码
+
+    Returns:
+        int: 对应的HTTP状态码
+    """
+    # 基础HTTP状态码直接返回
+    if error_code in [200, 400, 401, 403, 404, 500]:
+        return error_code
+
+    # 认证相关错误 (1001-1099) -> 401
+    if 1001 <= error_code < 1100:
+        if error_code == 1003:  # ACCOUNT_DISABLED -> 403
+            return 403
+        return 401
+
+    # 数据验证错误 (2001-2099) -> 400
+    if 2001 <= error_code < 2100:
+        return 400
+
+    # 数据操作错误 (3001-3099) -> 404
+    if 3001 <= error_code < 3100:
+        return 404
+
+    # 默认返回500
+    return 500

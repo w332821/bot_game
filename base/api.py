@@ -2,6 +2,7 @@ import typing
 import json
 from fastapi.responses import JSONResponse
 from base.json_encoder import DecimalEncoder
+from base.error_codes import get_http_status_code
 
 
 class UnifyResponse(JSONResponse):
@@ -36,11 +37,29 @@ def success_response(data, message: str = '操作成功'):
 
 
 def error_response(code: int, message: str, data=None):
-    return {
+    """
+    返回错误响应，设置正确的HTTP状态码
+
+    Args:
+        code: 自定义错误码
+        message: 错误消息
+        data: 错误数据
+
+    Returns:
+        JSONResponse: HTTP响应，状态码根据错误码自动设置
+    """
+    http_status = get_http_status_code(code)
+
+    content = {
         'code': code,
         'message': message,
         'data': data if data is not None else None
     }
+
+    return JSONResponse(
+        status_code=http_status,
+        content=content
+    )
 
 
 def paginate_response(list_data, total, page, page_size, message: str = '操作成功', summary=None, cross_page_stats=None):

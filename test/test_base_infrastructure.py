@@ -33,16 +33,24 @@ class TestUnifiedResponse:
     def test_error_response(self):
         """测试错误响应"""
         response = error_response(404, "资源不存在")
-        assert response["code"] == 404
-        assert response["message"] == "资源不存在"
-        assert response["data"] is None
+        assert response.status_code == 404  # 验证HTTP状态码
+        # 解析响应体
+        import json
+        body = json.loads(response.body.decode())
+        assert body["code"] == 404
+        assert body["message"] == "资源不存在"
+        assert body["data"] is None
 
     def test_error_response_with_data(self):
         """测试带数据的错误响应"""
         response = error_response(400, "参数错误", data={"field": "account"})
-        assert response["code"] == 400
-        assert response["message"] == "参数错误"
-        assert response["data"] == {"field": "account"}
+        assert response.status_code == 400  # 验证HTTP状态码
+        # 解析响应体
+        import json
+        body = json.loads(response.body.decode())
+        assert body["code"] == 400
+        assert body["message"] == "参数错误"
+        assert body["data"] == {"field": "account"}
 
     def test_paginate_response(self):
         """测试分页响应"""
@@ -93,6 +101,47 @@ class TestUnifiedResponse:
 
         assert "summary" in response["data"]
         assert "crossPageStats" in response["data"]
+
+    def test_error_response_http_status_mapping(self):
+        """测试错误码到HTTP状态码的映射"""
+        import json
+
+        # 认证错误 -> 401
+        response = error_response(ErrorCode.ACCOUNT_OR_PASSWORD_ERROR, "密码错误")
+        assert response.status_code == 401
+        body = json.loads(response.body.decode())
+        assert body["code"] == 1001
+        assert body["message"] == "密码错误"
+
+        # 账户禁用 -> 403
+        response = error_response(ErrorCode.ACCOUNT_DISABLED, "账户禁用")
+        assert response.status_code == 403
+        body = json.loads(response.body.decode())
+        assert body["code"] == 1003
+
+        # 数据验证错误 -> 400
+        response = error_response(ErrorCode.ACCOUNT_ALREADY_EXISTS, "账户已存在")
+        assert response.status_code == 400
+        body = json.loads(response.body.decode())
+        assert body["code"] == 2001
+
+        # 数据不存在 -> 404
+        response = error_response(ErrorCode.DATA_NOT_FOUND, "数据不存在")
+        assert response.status_code == 404
+        body = json.loads(response.body.decode())
+        assert body["code"] == 3001
+
+        # 内部错误 -> 500
+        response = error_response(ErrorCode.INTERNAL_ERROR, "服务器错误")
+        assert response.status_code == 500
+        body = json.loads(response.body.decode())
+        assert body["code"] == 500
+
+        # 基础HTTP状态码直接返回
+        response = error_response(400, "请求错误")
+        assert response.status_code == 400
+        body = json.loads(response.body.decode())
+        assert body["code"] == 400
 
 
 class TestErrorCodes:
