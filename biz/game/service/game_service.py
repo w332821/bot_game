@@ -32,7 +32,8 @@ class GameService:
         chat_repo: ChatRepository,
         draw_repo: DrawRepository,
         odds_service: OddsService,
-        bot_api_client: BotApiClient
+        bot_api_client: BotApiClient,
+        **kwargs
     ):
         self.user_service = user_service
         self.user_repo = user_repo

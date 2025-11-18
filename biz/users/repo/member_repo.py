@@ -50,7 +50,7 @@ class MemberRepository:
 
         online_filter = ""
         if show_online:
-            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE os.user_id=u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
+            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
 
         async with self._session_factory() as session:
             query = text(
@@ -58,10 +58,10 @@ class MemberRepository:
                 SELECT mp.id, mp.account, u.balance, mp.plate, mp.open_time, mp.superior_account,
                        CASE WHEN EXISTS (
                            SELECT 1 FROM online_status os
-                           WHERE os.user_id COLLATE utf8mb4_unicode_ci = u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
+                           WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
                        ) THEN 1 ELSE 0 END AS online
                 FROM member_profiles mp
-                JOIN users u ON u.id = mp.user_id COLLATE utf8mb4_unicode_ci
+                JOIN users u ON BINARY u.id = BINARY mp.user_id
                 WHERE {' AND '.join(where)} {online_filter}
                 ORDER BY mp.open_time DESC
                 LIMIT :limit OFFSET :offset
@@ -74,7 +74,7 @@ class MemberRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM member_profiles mp
-                JOIN users u ON u.id = mp.user_id COLLATE utf8mb4_unicode_ci
+                JOIN users u ON BINARY u.id = BINARY mp.user_id
                 WHERE {' AND '.join(where)} {online_filter}
                 """
             )
@@ -102,7 +102,7 @@ class MemberRepository:
             query = text(
                 """
                 SELECT mp.account, mp.superior_account, u.balance, mp.plate, mp.company_remarks, mp.open_time
-                FROM member_profiles mp JOIN users u ON u.id = mp.user_id COLLATE utf8mb4_unicode_ci
+                FROM member_profiles mp JOIN users u ON BINARY u.id = BINARY mp.user_id
                 WHERE mp.account = :account
                 LIMIT 1
                 """
@@ -173,30 +173,36 @@ class MemberRepository:
             if count > 0:
                 raise ValueError("账号已存在")
 
-            # Create user record first
+            # 先创建 users 记录（通用账户数据，不含密码）
+            # 生成唯一的 user_id
+            import uuid
+            user_id = str(uuid.uuid4())
+
             user_query = text(
                 """
-                INSERT INTO users (balance, password_hash)
-                VALUES (:balance, :password_hash)
+                INSERT INTO users (id, username, chat_id, balance, join_date, created_at, updated_at)
+                VALUES (:id, :username, :chat_id, :balance, CURDATE(), NOW(), NOW())
                 """
             )
-            await session.execute(user_query, {"balance": Decimal("0.00"), "password_hash": hashed_password})
+            await session.execute(user_query, {
+                "id": user_id,
+                "username": account,  # 使用账号作为用户名
+                "chat_id": "admin_backend",  # 后台管理账号，标记为特殊 chat_id
+                "balance": Decimal("0.00")
+            })
             await session.flush()
 
-            # Get the user_id
-            user_id_result = await session.execute(text("SELECT LAST_INSERT_ID() AS id"))
-            user_id = user_id_result.scalar()
-
-            # Create member profile
+            # 创建 member profile（扩展信息，包含密码）
             member_query = text(
                 """
-                INSERT INTO member_profiles (user_id, account, plate, superior_account, company_remarks)
-                VALUES (:user_id, :account, :plate, :superior_account, :company_remarks)
+                INSERT INTO member_profiles (user_id, account, password, plate, superior_account, company_remarks)
+                VALUES (:user_id, :account, :password, :plate, :superior_account, :company_remarks)
                 """
             )
             await session.execute(member_query, {
                 "user_id": user_id,
                 "account": account,
+                "password": hashed_password,
                 "plate": plate,
                 "superior_account": superior_account,
                 "company_remarks": company_remarks
@@ -284,7 +290,7 @@ class MemberRepository:
                 SELECT bo.id, bo.order_no, bo.bet_type, bo.bet_amount, bo.win_amount,
                        bo.status, bo.bet_time, bo.settle_time
                 FROM bet_orders bo
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = bo.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY bo.user_id
                 WHERE {' AND '.join(where)}
                 ORDER BY bo.bet_time DESC
                 LIMIT :limit OFFSET :offset
@@ -312,7 +318,7 @@ class MemberRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM bet_orders bo
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = bo.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY bo.user_id
                 WHERE {' AND '.join(where)}
                 """
             )
@@ -326,7 +332,7 @@ class MemberRepository:
                     COALESCE(SUM(bo.bet_amount), 0) AS total_bet,
                     COALESCE(SUM(bo.win_amount), 0) AS total_win
                 FROM bet_orders bo
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = bo.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY bo.user_id
                 WHERE {' AND '.join(where)}
                 LIMIT :limit OFFSET :offset
                 """
@@ -376,7 +382,7 @@ class MemberRepository:
                 SELECT t.id, t.transaction_no, t.transaction_type, t.amount,
                        t.balance_before, t.balance_after, t.transaction_time, t.remarks
                 FROM transactions t
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = t.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY t.user_id
                 WHERE {' AND '.join(where)}
                 ORDER BY t.transaction_time DESC
                 LIMIT :limit OFFSET :offset
@@ -404,7 +410,7 @@ class MemberRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM transactions t
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = t.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY t.user_id
                 WHERE {' AND '.join(where)}
                 """
             )
@@ -416,7 +422,7 @@ class MemberRepository:
                 f"""
                 SELECT COALESCE(SUM(t.amount), 0) AS total_amount
                 FROM transactions t
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = t.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY t.user_id
                 WHERE {' AND '.join(where)}
                 LIMIT :limit OFFSET :offset
                 """
@@ -465,7 +471,7 @@ class MemberRepository:
                 SELECT ac.id, ac.change_type, ac.amount, ac.balance_before,
                        ac.balance_after, ac.change_time, ac.remarks
                 FROM account_changes ac
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = ac.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY ac.user_id
                 WHERE {' AND '.join(where)}
                 ORDER BY ac.change_time DESC
                 LIMIT :limit OFFSET :offset
@@ -492,7 +498,7 @@ class MemberRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM account_changes ac
-                JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = ac.user_id
+                JOIN member_profiles mp ON BINARY mp.user_id = BINARY ac.user_id
                 WHERE {' AND '.join(where)}
                 """
             )

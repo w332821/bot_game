@@ -35,8 +35,8 @@ class PersonalRepository:
                     ap.subordinate_transfer,
                     ap.default_rebate_plate
                 FROM users u
-                LEFT JOIN agent_profiles ap ON u.id = ap.user_id
-                LEFT JOIN member_profiles mp ON u.id = mp.user_id
+                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
+                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
                 WHERE ap.account = :account OR mp.account = :account
                 LIMIT 1
             """)
@@ -94,8 +94,8 @@ class PersonalRepository:
                     u.id,
                     CASE WHEN ap.id IS NOT NULL THEN 'agent' ELSE 'member' END as userType
                 FROM users u
-                LEFT JOIN agent_profiles ap ON u.id = ap.user_id
-                LEFT JOIN member_profiles mp ON u.id = mp.user_id
+                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
+                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
                 WHERE ap.account = :account OR mp.account = :account
                 LIMIT 1
             """)
@@ -249,8 +249,8 @@ class PersonalRepository:
             user_query = text("""
                 SELECT u.id
                 FROM users u
-                LEFT JOIN agent_profiles ap ON u.id = ap.user_id
-                LEFT JOIN member_profiles mp ON u.id = mp.user_id
+                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
+                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
                 WHERE ap.account = :account OR mp.account = :account
                 LIMIT 1
             """)
@@ -296,8 +296,8 @@ class PersonalRepository:
             user_query = text("""
                 SELECT u.id
                 FROM users u
-                LEFT JOIN agent_profiles ap ON u.id = ap.user_id
-                LEFT JOIN member_profiles mp ON u.id = mp.user_id
+                LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
+                LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
                 WHERE ap.account = :account OR mp.account = :account
                 LIMIT 1
             """)
@@ -404,50 +404,133 @@ class PersonalRepository:
                 "total": total
             }
 
-    async def update_password(self, account: str, old_password: str, new_password: str) -> bool:
+    async def update_password(self, account: str, old_password: str, new_password: str, user_type: str = "agent") -> bool:
         """
         修改密码
+
+        Args:
+            account: 账号
+            old_password: 旧密码
+            new_password: 新密码
+            user_type: 用户类型 (super_admin/distributor/agent/member)
         """
         async with self.session_factory() as session:
             session: AsyncSession
 
-            # 获取当前密码
-            query = text("""
-                SELECT u.id, u.password
-                FROM users u
-                LEFT JOIN agent_profiles ap ON u.id = ap.user_id
-                LEFT JOIN member_profiles mp ON u.id = mp.user_id
-                WHERE ap.account = :account OR mp.account = :account
-                LIMIT 1
-            """)
+            # 管理员：从 admin_accounts 修改
+            if user_type in ["super_admin", "distributor"]:
+                # 查询管理员密码
+                query = text("""
+                    SELECT id, password
+                    FROM admin_accounts
+                    WHERE username = :account
+                    LIMIT 1
+                """)
+                result = await session.execute(query, {"account": account})
+                row = result.fetchone()
 
-            result = await session.execute(query, {"account": account})
-            row = result.fetchone()
+                if not row:
+                    raise ValueError("用户不存在")
 
-            if not row:
-                raise ValueError("用户不存在")
+                admin_id = row.id
+                current_password = row.password
 
-            user_id = row.id
-            current_password = row.password
+                # 验证旧密码
+                if not bcrypt.checkpw(old_password.encode('utf-8'), current_password.encode('utf-8')):
+                    raise ValueError("旧密码错误")
 
-            # 验证旧密码
-            if not bcrypt.checkpw(old_password.encode('utf-8'), current_password.encode('utf-8')):
-                raise ValueError("旧密码错误")
+                # 加密新密码
+                new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-            # 加密新密码
-            new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                # 更新管理员密码
+                update_query = text("""
+                    UPDATE admin_accounts
+                    SET password = :password, updated_at = NOW()
+                    WHERE id = :admin_id
+                """)
+                await session.execute(update_query, {
+                    "admin_id": admin_id,
+                    "password": new_password_hash
+                })
 
-            # 更新密码
-            update_query = text("""
-                UPDATE users
-                SET password = :password, updated_at = NOW()
-                WHERE id = :user_id
-            """)
+            # 代理：从 agent_profiles 修改
+            elif user_type == "agent":
+                query = text("""
+                    SELECT id, password
+                    FROM agent_profiles
+                    WHERE account = :account
+                    LIMIT 1
+                """)
+                result = await session.execute(query, {"account": account})
+                row = result.fetchone()
 
-            await session.execute(update_query, {
-                "user_id": user_id,
-                "password": new_password_hash
-            })
+                if not row:
+                    raise ValueError("用户不存在")
+
+                profile_id = row.id
+                current_password = row.password
+
+                if not current_password:
+                    raise ValueError("该账号未设置密码")
+
+                # 验证旧密码
+                if not bcrypt.checkpw(old_password.encode('utf-8'), current_password.encode('utf-8')):
+                    raise ValueError("旧密码错误")
+
+                # 加密新密码
+                new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+                # 更新代理密码
+                update_query = text("""
+                    UPDATE agent_profiles
+                    SET password = :password, updated_at = NOW()
+                    WHERE id = :profile_id
+                """)
+                await session.execute(update_query, {
+                    "profile_id": profile_id,
+                    "password": new_password_hash
+                })
+
+            # 会员：从 member_profiles 修改
+            elif user_type == "member":
+                query = text("""
+                    SELECT id, password
+                    FROM member_profiles
+                    WHERE account = :account
+                    LIMIT 1
+                """)
+                result = await session.execute(query, {"account": account})
+                row = result.fetchone()
+
+                if not row:
+                    raise ValueError("用户不存在")
+
+                profile_id = row.id
+                current_password = row.password
+
+                if not current_password:
+                    raise ValueError("该账号未设置密码")
+
+                # 验证旧密码
+                if not bcrypt.checkpw(old_password.encode('utf-8'), current_password.encode('utf-8')):
+                    raise ValueError("旧密码错误")
+
+                # 加密新密码
+                new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+                # 更新会员密码
+                update_query = text("""
+                    UPDATE member_profiles
+                    SET password = :password
+                    WHERE id = :profile_id
+                """)
+                await session.execute(update_query, {
+                    "profile_id": profile_id,
+                    "password": new_password_hash
+                })
+
+            else:
+                raise ValueError(f"未知的用户类型: {user_type}")
 
             await session.commit()
             return True

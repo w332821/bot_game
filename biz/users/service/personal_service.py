@@ -144,13 +144,20 @@ class PersonalService:
         self,
         account: str,
         old_password: str,
-        new_password: str
+        new_password: str,
+        user_type: str = "agent"
     ) -> bool:
         """
         修改密码
+
+        Args:
+            account: 账号
+            old_password: 旧密码
+            new_password: 新密码
+            user_type: 用户类型 (super_admin/distributor/agent/member)
         """
         # 验证新密码长度
         if len(new_password) < 6 or len(new_password) > 20:
             raise ValueError("新密码长度必须在 6-20 之间")
 
-        return await self.personal_repo.update_password(account, old_password, new_password)
+        return await self.personal_repo.update_password(account, old_password, new_password, user_type)

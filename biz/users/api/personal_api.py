@@ -228,18 +228,40 @@ async def get_login_logs(
 
 @router.put("/password", response_class=UnifyResponse)
 async def update_password(
-    account: str = Query(..., description="账号"),
     request: UpdatePasswordRequest = Body(...),
+    current_user: dict = Depends(get_current_admin),
     service: PersonalService = Depends(get_personal_service)
 ):
     """
-    修改密码
+    修改当前登录用户的密码
+
+    从JWT token中获取当前用户信息，只能修改自己的密码
+    支持：管理员/代理/会员
     """
     try:
+        # 从token中获取当前用户信息
+        user_role = current_user.get("role")
+
+        # 根据角色类型获取账号
+        if user_role in ["super_admin", "distributor"]:
+            # 管理员：使用 username
+            account = current_user.get("username")
+            if not account:
+                raise UnifyException("无法获取管理员账号", biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        elif user_role in ["agent", "member"]:
+            # 代理/会员：使用 account
+            account = current_user.get("account")
+            if not account:
+                raise UnifyException("无法获取用户账号", biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        else:
+            raise UnifyException("未知的用户角色", biz_code=ErrorCode.FORBIDDEN, http_code=200)
+
+        # 修改密码
         await service.update_password(
             account=account,
             old_password=request.oldPassword,
-            new_password=request.newPassword
+            new_password=request.newPassword,
+            user_type=user_role
         )
         return {"success": True}
     except ValueError as e:

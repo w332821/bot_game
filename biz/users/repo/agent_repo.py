@@ -72,7 +72,13 @@ class AgentRepository:
 
         online_filter = ""
         if show_online:
-            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE os.user_id=u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
+            online_filter = (
+                "AND EXISTS ("
+                "SELECT 1 FROM online_status os "
+                "WHERE BINARY os.user_id = BINARY u.id "
+                "AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)"
+                ")"
+            )
 
         async with self._session_factory() as session:
             query = text(
@@ -81,10 +87,10 @@ class AgentRepository:
                        ap.open_time, ap.superior_account,
                        CASE WHEN EXISTS (
                            SELECT 1 FROM online_status os
-                           WHERE os.user_id = u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
+                           WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
                        ) THEN 1 ELSE 0 END AS online
                 FROM agent_profiles ap
-                JOIN users u ON u.id = ap.user_id
+                JOIN users u ON BINARY u.id = BINARY ap.user_id
                 WHERE {' AND '.join(where)} {online_filter}
                 ORDER BY ap.open_time DESC
                 LIMIT :limit OFFSET :offset
@@ -97,7 +103,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM agent_profiles ap
-                JOIN users u ON u.id = ap.user_id
+                JOIN users u ON BINARY u.id = BINARY ap.user_id
                 WHERE {' AND '.join(where)} {online_filter}
                 """
             )
@@ -136,7 +142,7 @@ class AgentRepository:
                        ap.default_rebate_plate, ap.invite_code, ap.promotion_domains,
                        ap.company_remarks, ap.open_time
                 FROM agent_profiles ap
-                JOIN users u ON u.id = ap.user_id
+                JOIN users u ON BINARY u.id = BINARY ap.user_id
                 WHERE ap.account = :account
                 LIMIT 1
                 """
@@ -250,7 +256,7 @@ class AgentRepository:
 
         online_filter = ""
         if show_online:
-            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE os.user_id=u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
+            online_filter = "AND EXISTS (SELECT 1 FROM online_status os WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE))"
 
         async with self._session_factory() as session:
             query = text(
@@ -258,10 +264,10 @@ class AgentRepository:
                 SELECT mp.id, mp.account, u.balance, mp.plate, mp.open_time, mp.superior_account,
                        CASE WHEN EXISTS (
                            SELECT 1 FROM online_status os
-                           WHERE os.user_id = u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
+                           WHERE BINARY os.user_id = BINARY u.id AND os.last_seen >= DATE_SUB(NOW(), INTERVAL :win MINUTE)
                        ) THEN 1 ELSE 0 END AS online
                 FROM member_profiles mp
-                JOIN users u ON u.id = mp.user_id
+                JOIN users u ON BINARY u.id = BINARY mp.user_id
                 WHERE {' AND '.join(where)} {online_filter}
                 ORDER BY mp.open_time DESC
                 LIMIT :limit OFFSET :offset
@@ -274,7 +280,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM member_profiles mp
-                JOIN users u ON u.id = mp.user_id
+                JOIN users u ON BINARY u.id = BINARY mp.user_id
                 WHERE {' AND '.join(where)} {online_filter}
                 """
             )
@@ -327,34 +333,40 @@ class AgentRepository:
             if count > 0:
                 raise ValueError("账号已存在")
 
-            # Create user record first
+            # 先创建 users 记录（通用账户数据，不含密码）
+            # 生成唯一的 user_id
+            import uuid
+            user_id = str(uuid.uuid4())
+
             user_query = text(
                 """
-                INSERT INTO users (balance, password_hash)
-                VALUES (:balance, :password_hash)
+                INSERT INTO users (id, username, chat_id, balance, join_date, created_at, updated_at)
+                VALUES (:id, :username, :chat_id, :balance, CURDATE(), NOW(), NOW())
                 """
             )
-            await session.execute(user_query, {"balance": Decimal("0.00"), "password_hash": hashed_password})
+            await session.execute(user_query, {
+                "id": user_id,
+                "username": account,  # 使用账号作为用户名
+                "chat_id": "admin_backend",  # 后台管理账号，标记为特殊 chat_id
+                "balance": Decimal("0.00")
+            })
             await session.flush()
 
-            # Get the user_id
-            user_id_result = await session.execute(text("SELECT LAST_INSERT_ID() AS id"))
-            user_id = user_id_result.scalar()
-
-            # Create agent profile
+            # 创建 agent profile（扩展信息，包含密码）
             agent_query = text(
                 """
                 INSERT INTO agent_profiles
-                (user_id, account, plate, open_plate, earn_rebate, subordinate_transfer,
+                (user_id, account, password, plate, open_plate, earn_rebate, subordinate_transfer,
                  default_rebate_plate, invite_code, promotion_domains, superior_account, company_remarks)
                 VALUES
-                (:user_id, :account, :plate, :open_plate, :earn_rebate, :subordinate_transfer,
+                (:user_id, :account, :password, :plate, :open_plate, :earn_rebate, :subordinate_transfer,
                  :default_rebate_plate, :invite_code, :promotion_domains, :superior_account, :company_remarks)
                 """
             )
             await session.execute(agent_query, {
                 "user_id": user_id,
                 "account": account,
+                "password": hashed_password,
                 "plate": plate,
                 "open_plate": json.dumps(open_plate),
                 "earn_rebate": earn_rebate,
@@ -468,7 +480,7 @@ class AgentRepository:
                 SELECT t.id, t.transaction_no, t.transaction_type, t.amount,
                        t.balance_before, t.balance_after, t.transaction_time, t.remarks
                 FROM transactions t
-                JOIN agent_profiles ap ON ap.user_id = t.user_id
+                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY t.user_id
                 WHERE {' AND '.join(where)}
                 ORDER BY t.transaction_time DESC
                 LIMIT :limit OFFSET :offset
@@ -496,7 +508,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM transactions t
-                JOIN agent_profiles ap ON ap.user_id = t.user_id
+                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY t.user_id
                 WHERE {' AND '.join(where)}
                 """
             )
@@ -508,7 +520,7 @@ class AgentRepository:
                 f"""
                 SELECT COALESCE(SUM(t.amount), 0) AS total_amount
                 FROM transactions t
-                JOIN agent_profiles ap ON ap.user_id = t.user_id
+                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY t.user_id
                 WHERE {' AND '.join(where)}
                 LIMIT :limit OFFSET :offset
                 """
@@ -557,7 +569,7 @@ class AgentRepository:
                 SELECT ac.id, ac.change_type, ac.amount, ac.balance_before,
                        ac.balance_after, ac.change_time, ac.remarks
                 FROM account_changes ac
-                JOIN agent_profiles ap ON ap.user_id = ac.user_id
+                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY ac.user_id
                 WHERE {' AND '.join(where)}
                 ORDER BY ac.change_time DESC
                 LIMIT :limit OFFSET :offset
@@ -584,7 +596,7 @@ class AgentRepository:
                 f"""
                 SELECT COUNT(*) AS cnt
                 FROM account_changes ac
-                JOIN agent_profiles ap ON ap.user_id = ac.user_id
+                JOIN agent_profiles ap ON BINARY ap.user_id = BINARY ac.user_id
                 WHERE {' AND '.join(where)}
                 """
             )
