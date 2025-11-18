@@ -203,7 +203,8 @@ async def parse_bets(
     jiao_pattern1 = re.compile(r'角\s*([1-4][1-4])\s*/\s*(\d+)', re.IGNORECASE)
     jiao_pattern2 = re.compile(r'([1-4][1-4])\s*角\s*(\d+)', re.IGNORECASE)
     # 使用负向后查来避免匹配三码/更长序列中的中间部分（如"123/100"中的"23"）
-    jiao_pattern3 = re.compile(r'(?<![1-4])([1-4][1-4])\s*/\s*(\d+)', re.IGNORECASE)
+    # 同时避免匹配中文关键词后的数字（如"特码23/100"）
+    jiao_pattern3 = re.compile(r'(?<![1-4\u4e00-\u9fff])([1-4][1-4])\s*/\s*(\d+)', re.IGNORECASE)
 
     for match in jiao_pattern1.finditer(message):
         numbers = [int(n) for n in match.group(1)]
