@@ -9,6 +9,7 @@ from base.api import UnifyResponse
 
 from biz.admin.service.admin_service import AdminService
 from biz.admin.models.model import AdminLogin, AdminCreate
+from biz.auth.dependencies import get_current_admin
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 
@@ -35,10 +36,6 @@ def get_admin_service(service: AdminService = Depends(Provide[Container.admin_se
     return service
 
 
-def get_current_admin_id() -> str:
-    return "system"
-
-
 # ===== API端点 =====
 
 @router.post("/login")
@@ -56,13 +53,14 @@ async def login(
 
 @router.get("/info")
 async def get_admin_info(
-    admin_id: str = Depends(get_current_admin_id),
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
     获取当前登录管理员信息
     """
     try:
+        admin_id = current_admin["admin_id"]
         admin = await admin_service.get_admin(admin_id)
         if not admin:
             return {"success": False, "error": "管理员不存在"}
@@ -75,6 +73,7 @@ async def get_admin_info(
 @router.post("/add")
 async def create_admin(
     request: AdminCreate,
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
@@ -99,6 +98,7 @@ async def create_admin(
 @router.get("/{adminId}")
 async def get_admin(
     adminId: str,
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
@@ -118,6 +118,7 @@ async def get_admin(
 async def change_password(
     adminId: str,
     request: ChangePasswordRequest,
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
@@ -135,6 +136,7 @@ async def change_password(
 async def update_status(
     adminId: str,
     request: UpdateStatusRequest,
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
@@ -155,6 +157,7 @@ async def update_status(
 @router.delete("/{adminId}")
 async def delete_admin(
     adminId: str,
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
@@ -177,6 +180,7 @@ async def get_all_admins(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     role: Optional[str] = Query(None),
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """
@@ -194,6 +198,7 @@ async def get_all_admins(
 async def get_distributors(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    current_admin: dict = Depends(get_current_admin),
     admin_service: AdminService = Depends(get_admin_service)
 ):
     """

@@ -12,6 +12,7 @@ from base.game_name_mapper import validate_game_name, VALID_GAMES_CN
 
 from biz.reports.service.report_service import ReportService
 from biz.reports.models.report_models import RecalculateRequest
+from biz.auth.dependencies import get_current_admin
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 
@@ -32,6 +33,7 @@ async def get_financial_summary(
     dateStart: str = Query(..., description="开始日期 YYYY-MM-DD"),
     dateEnd: str = Query(..., description="结束日期 YYYY-MM-DD"),
     plate: Optional[str] = Query(None, pattern="^[ABCD]$", description="盘口"),
+    current_admin: dict = Depends(get_current_admin),
     report_service: ReportService = Depends(get_report_service)
 ):
     """
@@ -59,6 +61,7 @@ async def get_financial_report(
     dateStart: str = Query(..., description="开始日期 YYYY-MM-DD"),
     dateEnd: str = Query(..., description="结束日期 YYYY-MM-DD"),
     account: Optional[str] = Query(None, description="账号"),
+    current_admin: dict = Depends(get_current_admin),
     report_service: ReportService = Depends(get_report_service)
 ):
     """

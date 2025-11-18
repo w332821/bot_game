@@ -10,6 +10,7 @@ from base.error_codes import ErrorCode, get_error_message
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 from biz.users.service.rebate_service import RebateService
+from biz.auth.dependencies import get_current_admin
 from base.game_name_mapper import validate_game_name
 
 
@@ -46,6 +47,7 @@ def get_rebate_service(service: RebateService = Depends(Provide[Container.rebate
 @router.get("/{account}", response_class=UnifyResponse)
 async def get_rebate_settings(
     account: str,
+    current_admin: dict = Depends(get_current_admin),
     service: RebateService = Depends(get_rebate_service)
 ):
     """
@@ -70,6 +72,7 @@ async def get_rebate_settings(
 async def update_rebate_settings(
     account: str,
     request: UpdateRebateRequest = Body(...),
+    current_admin: dict = Depends(get_current_admin),
     service: RebateService = Depends(get_rebate_service)
 ):
     """

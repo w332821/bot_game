@@ -10,6 +10,7 @@ from base.error_codes import ErrorCode, get_error_message
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 from biz.roles.service.role_service import RoleService
+from biz.auth.dependencies import get_current_admin
 import re
 
 
@@ -74,6 +75,7 @@ async def get_roles(
     page: int = Query(1, ge=1),
     pageSize: int = Query(10, ge=1, le=100),
     roleName: Optional[str] = Query(None, description="角色名称搜索"),
+    current_admin: dict = Depends(get_current_admin),
     service: RoleService = Depends(get_role_service)
 ):
     """
@@ -94,6 +96,7 @@ async def get_roles(
 @router.get("/{role_id}", response_class=UnifyResponse)
 async def get_role_detail(
     role_id: int,
+    current_admin: dict = Depends(get_current_admin),
     service: RoleService = Depends(get_role_service)
 ):
     """
@@ -117,6 +120,7 @@ async def get_role_detail(
 @router.post("", response_class=UnifyResponse)
 async def create_role(
     request: CreateRoleRequest = Body(...),
+    current_admin: dict = Depends(get_current_admin),
     service: RoleService = Depends(get_role_service)
 ):
     """
@@ -139,6 +143,7 @@ async def create_role(
 async def update_role(
     role_id: int,
     request: UpdateRoleRequest = Body(...),
+    current_admin: dict = Depends(get_current_admin),
     service: RoleService = Depends(get_role_service)
 ):
     """
@@ -168,6 +173,7 @@ async def update_role(
 @router.delete("/{role_id}", response_class=UnifyResponse)
 async def delete_role(
     role_id: int,
+    current_admin: dict = Depends(get_current_admin),
     service: RoleService = Depends(get_role_service)
 ):
     """
@@ -197,6 +203,7 @@ async def delete_role(
 
 @router.get("/permissions", response_class=UnifyResponse)
 async def get_permissions_tree(
+    current_admin: dict = Depends(get_current_admin),
     service: RoleService = Depends(get_role_service)
 ):
     """

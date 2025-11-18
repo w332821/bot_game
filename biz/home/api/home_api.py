@@ -4,6 +4,7 @@ from base.exception import UnifyException
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 from biz.home.service.home_service import HomeService
+from biz.auth.dependencies import get_current_admin
 from datetime import datetime
 
 router = APIRouter(prefix="/api/home", tags=["home"]) 
@@ -17,6 +18,7 @@ def get_home_service(service: HomeService = Depends(Provide[Container.home_servi
 @router.get("/online-count", response_class=UnifyResponse)
 async def online_count(
     windowMinutes: int = Query(5, ge=1, le=60),
+    current_admin: dict = Depends(get_current_admin),
     home_service: HomeService = Depends(get_home_service)
 ):
     try:
@@ -29,6 +31,7 @@ async def online_count(
 @router.get("/online-trend", response_class=UnifyResponse)
 async def online_trend(
     date: str | None = Query(None),
+    current_admin: dict = Depends(get_current_admin),
     home_service: HomeService = Depends(get_home_service)
 ):
     try:

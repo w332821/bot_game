@@ -8,6 +8,7 @@ from base.api import success_response, error_response
 from base.error_codes import ErrorCode, get_error_message
 
 from biz.admin.service.admin_service import AdminService
+from biz.auth.utils.jwt_utils import create_access_token
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 
@@ -54,13 +55,22 @@ async def login(
         if result.get('success'):
             # 登录成功,返回用户信息
             admin_data = result.get('admin', {})
+
+            # 生成JWT token
+            token = create_access_token({
+                "admin_id": admin_data.get('id'),
+                "username": admin_data.get('username'),
+                "role": admin_data.get('role', 'admin')
+            })
+
             return success_response(
                 data={
                     "user": {
                         "id": admin_data.get('id'),
                         "account": admin_data.get('username'),
                         "userType": admin_data.get('role', 'admin')
-                    }
+                    },
+                    "token": token
                 },
                 message="登录成功"
             )

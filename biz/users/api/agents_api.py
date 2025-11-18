@@ -7,6 +7,7 @@ from base.error_codes import ErrorCode, get_error_message
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 from biz.users.service.agent_service import AgentService
+from biz.auth.dependencies import get_current_admin
 
 
 class CreateAgentRequest(BaseModel):
@@ -69,6 +70,7 @@ async def list_agents(
     plate: Optional[str] = Query(None),
     balanceMin: Optional[float] = Query(None),
     balanceMax: Optional[float] = Query(None),
+    current_admin: dict = Depends(get_current_admin),
     service: AgentService = Depends(get_agent_service)
 ):
     """代理列表"""
@@ -88,7 +90,7 @@ async def list_agents(
 
 
 @router.get("/{account}", response_class=UnifyResponse)
-async def get_agent_detail(account: str, service: AgentService = Depends(get_agent_service)):
+async def get_agent_detail(account: str, current_admin: dict = Depends(get_current_admin), service: AgentService = Depends(get_agent_service)):
     """代理详情"""
     try:
         detail = await service.get_agent_detail(account)

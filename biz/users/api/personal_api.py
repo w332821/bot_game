@@ -10,6 +10,7 @@ from base.error_codes import ErrorCode, get_error_message
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 from biz.users.service.personal_service import PersonalService
+from biz.auth.dependencies import get_current_admin
 from base.game_name_mapper import validate_game_name
 
 
@@ -76,6 +77,7 @@ def get_personal_service(service: PersonalService = Depends(Provide[Container.pe
 @router.get("/basic", response_class=UnifyResponse)
 async def get_basic_info(
     account: str = Query(..., description="账号"),
+    current_admin: dict = Depends(get_current_admin),
     service: PersonalService = Depends(get_personal_service)
 ):
     """

@@ -9,6 +9,7 @@ from base.error_codes import ErrorCode, get_error_message
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 from biz.roles.service.subaccount_service import SubAccountService
+from biz.auth.dependencies import get_current_admin
 
 
 class CreateSubAccountRequest(BaseModel):
@@ -70,6 +71,7 @@ async def get_sub_accounts(
     agentAccount: str = Query(..., description="代理账号"),
     page: int = Query(1, ge=1),
     pageSize: int = Query(20, ge=1, le=100),
+    current_admin: dict = Depends(get_current_admin),
     service: SubAccountService = Depends(get_subaccount_service)
 ):
     """
