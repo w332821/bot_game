@@ -8,13 +8,13 @@ from pydantic import BaseModel, Field
 from base.api import success_response, error_response
 from base.error_codes import ErrorCode, get_error_message
 from sqlalchemy import text
+from sqlalchemy.orm import sessionmaker
 import bcrypt
 
 from biz.admin.service.admin_service import AdminService
 from biz.auth.utils.jwt_utils import create_access_token
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
-from base.session import async_session_factory
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -33,13 +33,18 @@ class LoginRequest(BaseModel):
 def get_admin_service(service: AdminService = Depends(Provide[Container.admin_service])) -> AdminService:
     return service
 
+@inject
+def get_db_session_factory(session_factory: sessionmaker = Depends(Provide[Container.db_session_factory])) -> sessionmaker:
+    return session_factory
+
 
 # ===== API端点 =====
 
 @router.post("/login")
 async def login(
     request: LoginRequest,
-    admin_service: AdminService = Depends(get_admin_service)
+    admin_service: AdminService = Depends(get_admin_service),
+    session_factory: sessionmaker = Depends(get_db_session_factory)
 ):
     """
     统一登录接口（支持管理员/代理/会员）
@@ -79,7 +84,7 @@ async def login(
             )
 
         # 尝试代理/会员登录
-        async with async_session_factory() as session:
+        async with session_factory() as session:
             # 查询代理账号
             agent_query = text("""
                 SELECT id, user_id, account, password
