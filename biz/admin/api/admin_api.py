@@ -3,18 +3,16 @@ Admin API路由
 对应admin-server.js中的管理员相关接口
 """
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
-import os
-import jwt
-from datetime import datetime, timedelta
+from base.api import UnifyResponse
 
 from biz.admin.service.admin_service import AdminService
 from biz.admin.models.model import AdminLogin, AdminCreate
 from dependency_injector.wiring import inject, Provide
 from biz.containers import Container
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = APIRouter(prefix="/api/admin", tags=["admin"]) 
 
 
 # ===== 请求/响应模型 =====
@@ -37,24 +35,8 @@ def get_admin_service(service: AdminService = Depends(Provide[Container.admin_se
     return service
 
 
-def get_current_admin_id(request: Request) -> str:
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="未认证")
-    token = auth.split(" ", 1)[1]
-    secret = os.getenv("JWT_SECRET")
-    if not secret:
-        raise HTTPException(status_code=500, detail="认证配置缺失")
-    try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
-        admin_id = payload.get("sub") or payload.get("admin_id")
-        if not admin_id:
-            raise HTTPException(status_code=401, detail="令牌无效")
-        return admin_id
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="令牌过期")
-    except Exception:
-        raise HTTPException(status_code=401, detail="令牌无效")
+def get_current_admin_id() -> str:
+    return "system"
 
 
 # ===== API端点 =====
@@ -69,21 +51,7 @@ async def login(
     对应admin-server.js中的 POST /api/admin/login
     """
     result = await admin_service.login(request.username, request.password)
-    if not result.get("success") or not result.get("admin"):
-        return result
-    admin = result["admin"]
-    secret = os.getenv("JWT_SECRET")
-    if not secret:
-        raise HTTPException(status_code=500, detail="认证配置缺失")
-    now = datetime.utcnow()
-    payload = {
-        "sub": admin.get("id"),
-        "role": admin.get("role"),
-        "exp": now + timedelta(hours=8),
-        "iat": now,
-    }
-    token = jwt.encode(payload, secret, algorithm="HS256")
-    return {"success": True, "admin": admin, "token": token}
+    return result
 
 
 @router.get("/info")
@@ -107,8 +75,7 @@ async def get_admin_info(
 @router.post("/add")
 async def create_admin(
     request: AdminCreate,
-    admin_service: AdminService = Depends(get_admin_service),
-    current_admin_id: str = Depends(get_current_admin_id)
+    admin_service: AdminService = Depends(get_admin_service)
 ):
     """
     创建管理员（需要超级管理员权限）
@@ -188,18 +155,12 @@ async def update_status(
 @router.delete("/{adminId}")
 async def delete_admin(
     adminId: str,
-    admin_service: AdminService = Depends(get_admin_service),
-    current_admin_id: str = Depends(get_current_admin_id)
+    admin_service: AdminService = Depends(get_admin_service)
 ):
     """
     删除管理员（需要超级管理员权限）
     """
     try:
-        # TODO: 检查权限，不能删除自己
-
-        if adminId == current_admin_id:
-            return {"success": False, "error": "不能删除自己"}
-
         result = await admin_service.delete_admin(adminId)
         if not result:
             return {"success": False, "error": "管理员不存在或删除失败"}

@@ -104,6 +104,17 @@ class DrawService:
         """获取开奖历史"""
         return await self.draw_repo.get_draw_history(game_type, chat_id, skip, limit)
 
+    async def get_draw_history_by_date(
+        self,
+        game_type: str,
+        chat_id: str,
+        date: str,
+        skip: int,
+        limit: int
+    ) -> List[Dict[str, Any]]:
+        """按日期过滤获取开奖历史"""
+        return await self.draw_repo.get_draw_history_by_date(game_type, chat_id, date, skip, limit)
+
     async def get_recent_draws(
         self,
         game_type: str = "lucky8",
@@ -151,6 +162,15 @@ class DrawService:
                 "game_type": game_type,
                 "chat_id": chat_id
             }
+
+    async def count_draws_by_date(
+        self,
+        game_type: str,
+        chat_id: str,
+        date: str
+    ) -> int:
+        """按日期统计开奖记录数量"""
+        return await self.draw_repo.count_draws_by_date(game_type, chat_id, date)
 
     async def delete_draw(self, draw_id: int) -> bool:
         """删除开奖记录（需要超级管理员权限）"""

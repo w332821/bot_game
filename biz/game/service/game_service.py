@@ -512,13 +512,14 @@ class GameService:
 
             # ==================== 消息1: 开奖信息 ====================
             # 对应 bot-server.js line 660-673
-            game_name = '澳洲幸运8' if game_type == 'lucky8' else '新澳'
+            from biz.game.templates.message_templates import GameMessageTemplates
+            game_name = GameMessageTemplates.get_game_name(game_type)
             message = f"{game_name}\n\n第{issue}期\n\n开奖号码：\n{draw_code}\n\n"
 
             if special_number:
                 message += f"开奖结果：{str(special_number).zfill(2)}({draw_number}){size_type}{parity_type}"
             else:
-                if game_name == '新澳':
+                if game_type == 'liuhecai':
                     message += f"开奖结果：{draw_number}特"
                 else:
                     message += f"开奖结果：{draw_number}番"

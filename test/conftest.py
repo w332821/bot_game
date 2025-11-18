@@ -129,3 +129,30 @@ def sample_admin_data():
         "role": "admin",
         "status": "active"
     }
+
+
+@pytest.fixture
+def sample_report_date_range():
+    """示例报表日期范围"""
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    return {
+        "dateStart": today,
+        "dateEnd": today
+    }
+
+
+@pytest.fixture
+def valid_game_types():
+    """有效的游戏类型(中文)"""
+    return ["新奥六合彩", "168澳洲幸运8"]
+
+
+@pytest.fixture
+def valid_plates():
+    """有效的盘口"""
+    return ["A", "B", "C", "D"]
+
+
+# 设置环境变量,避免在测试时启动调度器
+os.environ["PYTEST_CURRENT_TEST"] = "true"

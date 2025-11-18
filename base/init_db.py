@@ -56,7 +56,21 @@ def init_database(verbose: bool = False):
             ChatTable,
             DrawHistoryTable,
             OddsConfigTable,
-            AdminAccountTable
+            AdminAccountTable,
+            OnlineStatusTable,
+            OnlineMetricsTable,
+            MemberProfileTable,
+            LoginLogTable,
+            BetOrderTable,
+            TransactionTable,
+            AccountChangeTable,
+            RebateSettingTable,
+            RoleTable,
+            RolePermissionTable,
+            SubAccountTable,
+            LotteryRebateConfigTable,
+            AgentProfileTable,
+            AgentSettlementConfigTable,
         )
 
         if verbose:
@@ -67,6 +81,10 @@ def init_database(verbose: bool = False):
             log.info(f"  - {DrawHistoryTable.__tablename__}")
             log.info(f"  - {OddsConfigTable.__tablename__}")
             log.info(f"  - {AdminAccountTable.__tablename__}")
+            log.info(f"  - {OnlineStatusTable.__tablename__}")
+            log.info(f"  - {OnlineMetricsTable.__tablename__}")
+            log.info(f"  - {MemberProfileTable.__tablename__}")
+            log.info(f"  - {LoginLogTable.__tablename__}")
 
         db_uri = get_database_uri_from_config()
         engine = get_mysql_sync_engine(db_uri, echo=verbose)

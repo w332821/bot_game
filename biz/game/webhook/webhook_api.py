@@ -171,21 +171,11 @@ async def handle_group_created(
         logger.error(f"⚠️ 同步群聊成员失败: {str(e)}")
 
     # 5. 发送欢迎消息
-    welcome_message = """🎰【澳洲幸运8游戏机器人】🎰
+    from biz.game.templates.message_templates import GameMessageTemplates
 
-欢迎使用！初始余额: 1000
-
-📋 玩法说明:
-• 番: "番 3/200" 或 "3番200" (赔率3倍)
-• 正: "正1/200" 或 "1/200" (赔率2倍)
-• 单双: "单200" 或 "双150" (赔率2倍)
-
-🔍 查询指令:
-• "查" - 查询余额
-• "排行" - 查看排行榜
-
-⏰ 每5分钟自动开奖
-💰 这是虚拟货币游戏，仅供娱乐！"""
+    # 获取群聊的游戏类型，默认为lucky8
+    game_type = existing_chat.get('game_type', 'lucky8') if existing_chat else 'lucky8'
+    welcome_message = GameMessageTemplates.get_welcome_message(game_type)
 
     await bot_client.send_message(chat_id, welcome_message)
 

@@ -130,6 +130,35 @@ class DrawRepository:
             rows = result.fetchall()
             return [dict(row._mapping) for row in rows]
 
+    async def get_draw_history_by_date(
+        self,
+        game_type: str,
+        chat_id: str,
+        date: str,
+        skip: int,
+        limit: int
+    ) -> List[Dict[str, Any]]:
+        """按日期过滤获取开奖历史 (YYYY-MM-DD)"""
+        async with self._session_factory() as session:
+            query = text(
+                """
+                SELECT * FROM draw_history
+                WHERE game_type = :game_type AND chat_id = :chat_id
+                  AND DATE(timestamp) = :lottery_date
+                ORDER BY timestamp DESC
+                LIMIT :limit OFFSET :skip
+                """
+            )
+            result = await session.execute(query, {
+                "game_type": game_type,
+                "chat_id": chat_id,
+                "lottery_date": date,
+                "skip": skip,
+                "limit": limit
+            })
+            rows = result.fetchall()
+            return [dict(row._mapping) for row in rows]
+
     async def get_recent_draws(
         self,
         game_type: str = "lucky8",
@@ -166,6 +195,29 @@ class DrawRepository:
             result = await session.execute(query, {
                 "game_type": game_type,
                 "chat_id": chat_id
+            })
+            row = result.fetchone()
+            return row[0] if row else 0
+
+    async def count_draws_by_date(
+        self,
+        game_type: str,
+        chat_id: str,
+        date: str
+    ) -> int:
+        """按日期统计开奖记录数量"""
+        async with self._session_factory() as session:
+            query = text(
+                """
+                SELECT COUNT(*) as count FROM draw_history
+                WHERE game_type = :game_type AND chat_id = :chat_id
+                  AND DATE(timestamp) = :lottery_date
+                """
+            )
+            result = await session.execute(query, {
+                "game_type": game_type,
+                "chat_id": chat_id,
+                "lottery_date": date
             })
             row = result.fetchone()
             return row[0] if row else 0

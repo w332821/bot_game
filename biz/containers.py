@@ -18,6 +18,23 @@ from biz.odds.service.odds_service import OddsService
 from biz.game.service.game_service import GameService
 from biz.chat.service.chat_service import ChatService
 from biz.admin.service.admin_service import AdminService
+from biz.draw.service.draw_service import DrawService
+from biz.home.repo.home_repo import HomeRepository
+from biz.home.service.home_service import HomeService
+from biz.users.repo.member_repo import MemberRepository
+from biz.users.service.member_service import MemberService
+from biz.users.repo.agent_repo import AgentRepository
+from biz.users.service.agent_service import AgentService
+from biz.users.repo.rebate_repo import RebateRepository
+from biz.users.service.rebate_service import RebateService
+from biz.users.repo.personal_repo import PersonalRepository
+from biz.users.service.personal_service import PersonalService
+from biz.roles.repo.role_repo import RoleRepository
+from biz.roles.service.role_service import RoleService
+from biz.roles.repo.subaccount_repo import SubAccountRepository
+from biz.roles.service.subaccount_service import SubAccountService
+from biz.reports.repo.report_repo import ReportRepository
+from biz.reports.service.report_service import ReportService
 
 # Import external clients
 from external.bot_api_client import BotApiClient
@@ -101,6 +118,91 @@ class Container(containers.DeclarativeContainer):
     admin_service = providers.Factory(
         AdminService,
         admin_repo=admin_repo
+    )
+
+    draw_service = providers.Factory(
+        DrawService,
+        draw_repo=draw_repo
+    )
+
+    home_repo = providers.Factory(
+        HomeRepository,
+        session_factory=db_session_factory
+    )
+
+    home_service = providers.Factory(
+        HomeService,
+        home_repo=home_repo
+    )
+
+    member_repo = providers.Factory(
+        MemberRepository,
+        session_factory=db_session_factory
+    )
+
+    member_service = providers.Factory(
+        MemberService,
+        member_repo=member_repo
+    )
+
+    agent_repo = providers.Factory(
+        AgentRepository,
+        session_factory=db_session_factory
+    )
+
+    agent_service = providers.Factory(
+        AgentService,
+        agent_repo=agent_repo
+    )
+
+    rebate_repo = providers.Factory(
+        RebateRepository,
+        session_factory=db_session_factory
+    )
+
+    rebate_service = providers.Factory(
+        RebateService,
+        rebate_repo=rebate_repo
+    )
+
+    personal_repo = providers.Factory(
+        PersonalRepository,
+        session_factory=db_session_factory
+    )
+
+    personal_service = providers.Factory(
+        PersonalService,
+        personal_repo=personal_repo
+    )
+
+    role_repo = providers.Factory(
+        RoleRepository,
+        session_factory=db_session_factory
+    )
+
+    role_service = providers.Factory(
+        RoleService,
+        role_repo=role_repo
+    )
+
+    subaccount_repo = providers.Factory(
+        SubAccountRepository,
+        session_factory=db_session_factory
+    )
+
+    subaccount_service = providers.Factory(
+        SubAccountService,
+        subaccount_repo=subaccount_repo
+    )
+
+    report_repo = providers.Factory(
+        ReportRepository,
+        session_factory=db_session_factory
+    )
+
+    report_service = providers.Factory(
+        ReportService,
+        report_repo=report_repo
     )
 
     # ===== External Clients =====

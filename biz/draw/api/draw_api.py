@@ -5,11 +5,18 @@ Draw API路由
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+import re
 
 from biz.draw.service.draw_service import DrawService
 from biz.draw.models.model import DrawCreate
+from dependency_injector.wiring import inject, Provide
+from biz.containers import Container
+from base.api import UnifyResponse
+from base.exception import UnifyException
 
-router = APIRouter(prefix="/api/draw", tags=["draw"])
+router = APIRouter(prefix="/api", tags=["lottery", "draw"]) 
 
 
 # ===== 请求/响应模型 =====
@@ -27,10 +34,9 @@ class CreateDrawRequest(BaseModel):
 
 # ===== 依赖注入 =====
 
-def get_draw_service() -> DrawService:
-    """获取DrawService实例（占位，实际使用依赖注入容器）"""
-    # TODO: 从依赖注入容器获取
-    raise NotImplementedError("需要配置依赖注入容器")
+@inject
+def get_draw_service(service: DrawService = Depends(Provide[Container.draw_service])) -> DrawService:
+    return service
 
 
 # ===== API端点 =====
@@ -166,7 +172,7 @@ async def delete_draw(
 
 # ===== 开奖列表API =====
 
-@router.get("s")  # 对应 /api/draws
+@router.get("s")
 async def get_all_draws(
     gameType: str = Query(default="lucky8"),
     chatId: str = Query(default="system"),
@@ -182,3 +188,144 @@ async def get_all_draws(
         return {"success": True, "draws": draws, "total": len(draws)}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def _to_chinese_game_name(game_type: str) -> str:
+    return "168澳洲幸运8" if game_type == "lucky8" else "新奥六合彩"
+
+
+def _parse_numbers(draw_code: str) -> List[str]:
+    return re.findall(r"\d+", str(draw_code))
+
+
+def _compute_metrics(numbers: List[int]) -> Dict[str, Any]:
+    if len(numbers) < 2:
+        return {
+            "championSum": None,
+            "championSize": None,
+            "championParity": None,
+            "dragonTiger": [None, None, None, None, None]
+        }
+    s = numbers[0] + numbers[1]
+    size = "大" if s >= 12 else "小"
+    parity = "单" if s % 2 == 1 else "双"
+    dt = []
+    if len(numbers) >= 10:
+        for i in range(5):
+            dt.append("龙" if numbers[i] > numbers[9 - i] else "虎")
+    else:
+        dt = [None, None, None, None, None]
+    return {
+        "championSum": s,
+        "championSize": size,
+        "championParity": parity,
+        "dragonTiger": dt
+    }
+
+
+def _format_time(ts: Any) -> str:
+    if isinstance(ts, datetime):
+        return ts.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        return datetime.fromisoformat(str(ts)).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return str(ts)
+
+
+@router.get("/lottery/results", response_class=UnifyResponse)
+async def get_lottery_results(
+    page: int = Query(1, ge=1),
+    pageSize: int = Query(20, ge=1, le=100),
+    lotteryType: Optional[str] = Query(None),
+    lotteryDate: Optional[str] = Query(None),
+    draw_service: DrawService = Depends(get_draw_service)
+):
+    try:
+        gt = "lucky8"
+        if lotteryType == "新奥六合彩":
+            gt = "liuhecai"
+        elif lotteryType == "168澳洲幸运8":
+            gt = "lucky8"
+        skip = (page - 1) * pageSize
+        if lotteryDate:
+            try:
+                datetime.strptime(lotteryDate, "%Y-%m-%d")
+            except Exception:
+                raise UnifyException("日期格式错误，应为 YYYY-MM-DD", biz_code=400, http_code=200)
+            rows = await draw_service.get_draw_history_by_date(gt, "system", lotteryDate, skip, pageSize)
+            total = await draw_service.count_draws_by_date(gt, "system", lotteryDate)
+        else:
+            rows = await draw_service.get_draw_history(gt, "system", skip, pageSize)
+            stats = await draw_service.get_draw_stats(gt, "system")
+            total = stats.get("total_count", 0)
+        items = []
+        for r in rows:
+            nums_str = _parse_numbers(r.get("draw_code", ""))
+            nums_int = []
+            for s in nums_str:
+                try:
+                    nums_int.append(int(s))
+                except Exception:
+                    nums_int.append(None)
+            metrics = _compute_metrics([n for n in nums_int if isinstance(n, int)])
+            item = {
+                "id": r.get("id"),
+                "issueNumber": r.get("issue"),
+                "lotteryTime": _format_time(r.get("timestamp")),
+                "lotteryType": _to_chinese_game_name(r.get("game_type", gt)),
+                "numbers": nums_str,
+                "championSum": metrics["championSum"],
+                "championSize": metrics["championSize"],
+                "championParity": metrics["championParity"],
+                "dragonTiger1": metrics["dragonTiger"][0],
+                "dragonTiger2": metrics["dragonTiger"][1],
+                "dragonTiger3": metrics["dragonTiger"][2],
+                "dragonTiger4": metrics["dragonTiger"][3],
+                "dragonTiger5": metrics["dragonTiger"][4],
+            }
+            items.append(item)
+        return {
+            "list": items,
+            "total": total,
+            "page": page,
+            "pageSize": pageSize
+        }
+    except Exception as e:
+        raise UnifyException(str(e), biz_code=500, http_code=200)
+
+
+@router.get("/lottery/results/{id}", response_class=UnifyResponse)
+async def get_lottery_result_detail(
+    id: int,
+    draw_service: DrawService = Depends(get_draw_service)
+):
+    try:
+        r = await draw_service.draw_repo.get_draw(id)
+        if not r:
+            raise UnifyException("资源不存在", biz_code=404, http_code=200)
+        nums_str = _parse_numbers(r.get("draw_code", ""))
+        nums_int = []
+        for s in nums_str:
+            try:
+                nums_int.append(int(s))
+            except Exception:
+                nums_int.append(None)
+        metrics = _compute_metrics([n for n in nums_int if isinstance(n, int)])
+        item = {
+            "id": r.get("id"),
+            "issueNumber": r.get("issue"),
+            "lotteryTime": _format_time(r.get("timestamp")),
+            "lotteryType": _to_chinese_game_name(r.get("game_type", "lucky8")),
+            "numbers": nums_str,
+            "championSum": metrics["championSum"],
+            "championSize": metrics["championSize"],
+            "championParity": metrics["championParity"],
+            "dragonTiger1": metrics["dragonTiger"][0],
+            "dragonTiger2": metrics["dragonTiger"][1],
+            "dragonTiger3": metrics["dragonTiger"][2],
+            "dragonTiger4": metrics["dragonTiger"][3],
+            "dragonTiger5": metrics["dragonTiger"][4],
+        }
+        return item
+    except Exception as e:
+        raise UnifyException(str(e), biz_code=500, http_code=200)

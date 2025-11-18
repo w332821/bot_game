@@ -360,11 +360,15 @@ class DrawScheduler:
             await asyncio.sleep(delay)
 
             logger.info(f"\n⏰ 开奖前90秒警告: {game_type}")
+
+            from biz.game.templates.message_templates import GameMessageTemplates
+            warning_message = GameMessageTemplates.get_countdown_warning(game_type)
+
             for chat_id in registered_chats:
                 try:
                     result = await self.bot_client.send_message(
                         chat_id,
-                        "⏰ 提示：还剩30秒停止下注\n\n距离开奖还剩：90秒"
+                        warning_message
                     )
 
                     # 如果返回403错误（机器人不在群里），自动注销该群聊
@@ -394,12 +398,16 @@ class DrawScheduler:
             await asyncio.sleep(delay)
 
             logger.info(f"\n🔒 开奖前60秒锁定: {game_type}")
+
+            from biz.game.templates.message_templates import GameMessageTemplates
+            lock_message = GameMessageTemplates.get_lock_message(game_type)
+
             for chat_id in registered_chats:
                 try:
                     self.bet_lock_status[chat_id] = True  # 锁定该群聊
                     result = await self.bot_client.send_message(
                         chat_id,
-                        "🔒 已停止下注和取消操作，请等待开奖结果\n\n距离开奖还剩：60秒"
+                        lock_message
                     )
 
                     # 如果返回403错误（机器人不在群里），自动注销该群聊

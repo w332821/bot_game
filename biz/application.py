@@ -45,6 +45,8 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ 数据库表初始化失败: {str(e)}")
         logger.warning("⚠️ 请手动运行: python -m base.init_db")
 
+    is_testing = os.getenv("PYTEST_CURRENT_TEST") is not None
+
     # 2. 初始化开奖API数据（与Node.js版本相同）
     from external import get_draw_api_client
     draw_client = get_draw_api_client()
@@ -63,9 +65,9 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("⚠️ 澳门六合彩开奖数据加载失败")
 
-        # 启动自动刷新（每5分钟）
-        await draw_client.start_auto_refresh(interval_minutes=5)
-        logger.info("✅ 开奖数据自动刷新已启动（间隔5分钟）")
+        if not is_testing:
+            await draw_client.start_auto_refresh(interval_minutes=5)
+            logger.info("✅ 开奖数据自动刷新已启动（间隔5分钟）")
 
     except Exception as e:
         logger.error(f"❌ 开奖API初始化失败: {str(e)}")
@@ -74,51 +76,50 @@ async def lifespan(app: FastAPI):
     # 初始化开奖调度器
     game_service = container.game_service()
     bot_client = container.bot_api_client()
-    scheduler = init_scheduler(game_service, bot_client)
-    logger.info("✅ 开奖调度器已初始化")
+    scheduler = None
+    if not is_testing:
+        scheduler = init_scheduler(game_service, bot_client)
+        logger.info("✅ 开奖调度器已初始化")
 
     # 将scheduler保存到container中,供其他服务使用
     container.scheduler_instance = scheduler
 
     # 自动注册所有已存在的活跃群聊到调度器
-    try:
-        from biz.chat.repo.chat_repo import ChatRepository
-        chat_repo = container.chat_repo()
+    if not is_testing:
+        try:
+            from biz.chat.repo.chat_repo import ChatRepository
+            chat_repo = container.chat_repo()
 
-        # 获取所有活跃群聊
-        active_chats = await chat_repo.get_all_chats(limit=1000, status='active')
-        logger.info(f"📊 发现 {len(active_chats)} 个活跃群聊")
+            active_chats = await chat_repo.get_all_chats(limit=1000, status='active')
+            logger.info(f"📊 发现 {len(active_chats)} 个活跃群聊")
 
-        # 按游戏类型分组注册
-        lucky8_count = 0
-        liuhecai_count = 0
+            lucky8_count = 0
+            liuhecai_count = 0
 
-        for chat in active_chats:
-            chat_id = chat['id']
-            game_type = chat.get('game_type', 'lucky8')
+            for chat in active_chats:
+                chat_id = chat['id']
+                game_type = chat.get('game_type', 'lucky8')
+                scheduler.register_chat_to_global_timer(chat_id, game_type)
+                if game_type == 'lucky8':
+                    lucky8_count += 1
+                elif game_type == 'liuhecai':
+                    liuhecai_count += 1
 
-            # 注册到全局定时器
-            scheduler.register_chat_to_global_timer(chat_id, game_type)
+            logger.info(f"✅ 已注册群聊到调度器:")
+            logger.info(f"   - 澳洲幸运8: {lucky8_count} 个群聊")
+            logger.info(f"   - 六合彩: {liuhecai_count} 个群聊")
 
-            if game_type == 'lucky8':
-                lucky8_count += 1
-            elif game_type == 'liuhecai':
-                liuhecai_count += 1
-
-        logger.info(f"✅ 已注册群聊到调度器:")
-        logger.info(f"   - 澳洲幸运8: {lucky8_count} 个群聊")
-        logger.info(f"   - 六合彩: {liuhecai_count} 个群聊")
-
-    except Exception as e:
-        logger.error(f"❌ 自动注册群聊失败: {str(e)}", exc_info=True)
-        logger.warning("⚠️ 定时器未启动，需要等待群聊事件触发")
+        except Exception as e:
+            logger.error(f"❌ 自动注册群聊失败: {str(e)}", exc_info=True)
+            logger.warning("⚠️ 定时器未启动，需要等待群聊事件触发")
 
     # 启动历史开奖定期同步（每60分钟一次）
-    try:
-        scheduler.start_history_sync(draw_repo=container.draw_repo(), draw_client=draw_client, interval_minutes=60)
-        logger.info("✅ 历史开奖定期同步任务已启动（60分钟）")
-    except Exception as e:
-        logger.warning(f"⚠️ 历史开奖同步任务启动失败: {str(e)}")
+    if not is_testing and scheduler:
+        try:
+            scheduler.start_history_sync(draw_repo=container.draw_repo(), draw_client=draw_client, interval_minutes=60)
+            logger.info("✅ 历史开奖定期同步任务已启动（60分钟）")
+        except Exception as e:
+            logger.warning(f"⚠️ 历史开奖同步任务启动失败: {str(e)}")
 
     yield
 
@@ -126,10 +127,12 @@ async def lifespan(app: FastAPI):
     logger.info("🔴 应用关闭中...")
 
     # 停止自动刷新
-    draw_client.stop_auto_refresh()
+    if not is_testing:
+        draw_client.stop_auto_refresh()
 
     # 关闭调度器
-    await shutdown_scheduler()
+    if scheduler:
+        await shutdown_scheduler()
 
     logger.info("✅ 应用已关闭")
 
@@ -166,6 +169,12 @@ container = Container()
 from biz.game.webhook import webhook_api
 from biz.chat.api import chat_api
 from biz.admin.api import admin_api
+from biz.draw.api import draw_api
+from biz.home.api import home_api
+from biz.users.api import members_api, agents_api, rebate_api, personal_api
+from biz.roles.api import role_api, subaccount_api
+from biz.auth.api import auth_api
+from biz.reports.api import report_api
 
 # 使用FastAPI依赖覆盖机制
 app.dependency_overrides[webhook_api.get_game_service] = lambda: container.game_service()
@@ -173,23 +182,54 @@ app.dependency_overrides[webhook_api.get_user_service] = lambda: container.user_
 app.dependency_overrides[webhook_api.get_chat_repo] = lambda: container.chat_repo()
 app.dependency_overrides[webhook_api.get_bot_client] = lambda: container.bot_api_client()
 app.dependency_overrides[admin_api.get_admin_service] = lambda: container.admin_service()
+app.dependency_overrides[draw_api.get_draw_service] = lambda: container.draw_service()
+app.dependency_overrides[home_api.get_home_service] = lambda: container.home_service()
+app.dependency_overrides[members_api.get_member_service] = lambda: container.member_service()
+app.dependency_overrides[agents_api.get_agent_service] = lambda: container.agent_service()
+app.dependency_overrides[rebate_api.get_rebate_service] = lambda: container.rebate_service()
+app.dependency_overrides[personal_api.get_personal_service] = lambda: container.personal_service()
+app.dependency_overrides[role_api.get_role_service] = lambda: container.role_service()
+app.dependency_overrides[subaccount_api.get_subaccount_service] = lambda: container.subaccount_service()
+app.dependency_overrides[auth_api.get_admin_service] = lambda: container.admin_service()
+app.dependency_overrides[report_api.get_report_service] = lambda: container.report_service()
 
 # 注册路由
 app.include_router(webhook_api.router)  # Webhook路由（不使用前缀）
 app.include_router(chat_api.router)  # Chat管理API
 app.include_router(admin_api.router)  # 管理后台API
+app.include_router(draw_api.router)  # 开奖/彩票API
+app.include_router(home_api.router)  # 首页统计API（真实数据）
+app.include_router(members_api.router)  # 会员查询API
+app.include_router(agents_api.router)  # 代理管理API
+app.include_router(rebate_api.router)  # 退水配置API
+app.include_router(personal_api.router)  # 个人中心API
+app.include_router(role_api.router)  # 角色管理API
+app.include_router(subaccount_api.router)  # 子账号管理API
+app.include_router(auth_api.router)  # 认证API
+app.include_router(report_api.router)  # 报表API
 
 # Wire依赖注入
 container.wire(modules=[
     "biz.game.webhook.webhook_api",
     "biz.chat.api.chat_api",
     "biz.admin.api.admin_api",
+    "biz.draw.api.draw_api",
+    "biz.home.api.home_api",
+    "biz.users.api.members_api",
+    "biz.users.api.agents_api",
+    "biz.users.api.rebate_api",
+    "biz.users.api.personal_api",
+    "biz.roles.api.role_api",
+    "biz.roles.api.subaccount_api",
+    "biz.auth.api.auth_api",
+    "biz.reports.api.report_api",
 ])
 
-# 健康检查端点
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "game-bot"}
+    from datetime import datetime
+    ts = datetime.utcnow().isoformat(timespec='milliseconds') + 'Z'
+    return {"status": "healthy", "timestamp": ts}
 
 
 # 测试端点
