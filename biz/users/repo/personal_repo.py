@@ -37,7 +37,7 @@ class PersonalRepository:
                 FROM users u
                 LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
                 LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
-                WHERE ap.account = :account OR mp.account = :account
+                WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
 
@@ -96,7 +96,7 @@ class PersonalRepository:
                 FROM users u
                 LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
                 LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
-                WHERE ap.account = :account OR mp.account = :account
+                WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
 
@@ -251,7 +251,7 @@ class PersonalRepository:
                 FROM users u
                 LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
                 LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
-                WHERE ap.account = :account OR mp.account = :account
+                WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
 
@@ -298,7 +298,7 @@ class PersonalRepository:
                 FROM users u
                 LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
                 LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
-                WHERE ap.account = :account OR mp.account = :account
+                WHERE ap.account COLLATE utf8mb4_unicode_ci = :account OR mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
 

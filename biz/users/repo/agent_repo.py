@@ -143,7 +143,7 @@ class AgentRepository:
                        ap.company_remarks, ap.open_time
                 FROM agent_profiles ap
                 JOIN users u ON BINARY u.id = BINARY ap.user_id
-                WHERE ap.account = :account
+                WHERE ap.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
                 """
             )

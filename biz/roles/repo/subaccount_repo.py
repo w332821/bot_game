@@ -234,7 +234,7 @@ class SubAccountRepository:
                 SELECT COUNT(*) as count
                 FROM sub_accounts sa
                 INNER JOIN agent_profiles ap ON sa.parent_user_id = ap.user_id
-                WHERE ap.account = :agent_account
+                WHERE ap.account COLLATE utf8mb4_unicode_ci = :agent_account
             """)
 
             result = await session.execute(query, {"agent_account": agent_account})
@@ -252,7 +252,7 @@ class SubAccountRepository:
             query = text("""
                 SELECT user_id
                 FROM agent_profiles
-                WHERE account = :agent_account
+                WHERE account COLLATE utf8mb4_unicode_ci = :agent_account
             """)
 
             result = await session.execute(query, {"agent_account": agent_account})

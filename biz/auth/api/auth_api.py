@@ -89,7 +89,7 @@ async def login(
             agent_query = text("""
                 SELECT id, user_id, account, password
                 FROM agent_profiles
-                WHERE account = :account
+                WHERE account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
             result = await session.execute(agent_query, {"account": request.account})
@@ -121,7 +121,7 @@ async def login(
             member_query = text("""
                 SELECT id, user_id, account, password
                 FROM member_profiles
-                WHERE account = :account
+                WHERE account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
             result = await session.execute(member_query, {"account": request.account})

@@ -29,8 +29,8 @@ class RebateRepository:
                 FROM users u
                 LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
                 LEFT JOIN rebate_settings rs ON BINARY u.id = BINARY rs.user_id
-                WHERE mp.account = :account OR (
-                    EXISTS (SELECT 1 FROM agent_profiles ap WHERE BINARY ap.user_id = BINARY u.id AND ap.account = :account)
+                WHERE mp.account COLLATE utf8mb4_unicode_ci = :account OR (
+                    EXISTS (SELECT 1 FROM agent_profiles ap WHERE BINARY ap.user_id = BINARY u.id AND ap.account COLLATE utf8mb4_unicode_ci = :account)
                 )
                 LIMIT 1
             """)
@@ -74,7 +74,7 @@ class RebateRepository:
                 FROM users u
                 LEFT JOIN member_profiles mp ON BINARY u.id = BINARY mp.user_id
                 LEFT JOIN agent_profiles ap ON BINARY u.id = BINARY ap.user_id
-                WHERE mp.account = :account OR ap.account = :account
+                WHERE mp.account COLLATE utf8mb4_unicode_ci = :account OR ap.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
             """)
 

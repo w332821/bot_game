@@ -103,7 +103,7 @@ class MemberRepository:
                 """
                 SELECT mp.account, mp.superior_account, u.balance, mp.plate, mp.company_remarks, mp.open_time
                 FROM member_profiles mp JOIN users u ON BINARY u.id = BINARY mp.user_id
-                WHERE mp.account = :account
+                WHERE mp.account COLLATE utf8mb4_unicode_ci = :account
                 LIMIT 1
                 """
             )
