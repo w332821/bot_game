@@ -357,10 +357,10 @@ class AgentRepository:
                 """
                 INSERT INTO agent_profiles
                 (user_id, account, password, plate, open_plate, earn_rebate, subordinate_transfer,
-                 default_rebate_plate, invite_code, promotion_domains, superior_account, company_remarks, open_time, created_at)
+                 default_rebate_plate, invite_code, promotion_domains, superior_account, company_remarks, level, open_time, created_at)
                 VALUES
                 (:user_id, :account, :password, :plate, :open_plate, :earn_rebate, :subordinate_transfer,
-                 :default_rebate_plate, :invite_code, :promotion_domains, :superior_account, :company_remarks, NOW(), NOW())
+                 :default_rebate_plate, :invite_code, :promotion_domains, :superior_account, :company_remarks, 1, NOW(), NOW())
                 """
             )
             await session.execute(agent_query, {
