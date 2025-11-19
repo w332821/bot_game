@@ -32,11 +32,11 @@ class BetRepository:
             query = text("""
                 INSERT INTO bets (
                     id, user_id, username, chat_id, game_type, lottery_type,
-                    bet_number, bet_amount, odds, status, result, pnl,
+                    bet_number, bet_amount, valid_amount, odds, status, result, pnl, rebate,
                     issue, created_at
                 ) VALUES (
                     :id, :user_id, :username, :chat_id, :game_type, :lottery_type,
-                    :bet_number, :bet_amount, :odds, :status, :result, :pnl,
+                    :bet_number, :bet_amount, :valid_amount, :odds, :status, :result, :pnl, :rebate,
                     :issue, NOW()
                 )
             """)
@@ -50,10 +50,12 @@ class BetRepository:
                 "lottery_type": bet_data["lottery_type"],
                 "bet_number": bet_data.get("bet_number"),
                 "bet_amount": bet_data["bet_amount"],
+                "valid_amount": bet_data.get("valid_amount", bet_data["bet_amount"]),
                 "odds": bet_data["odds"],
                 "status": bet_data.get("status", "active"),
                 "result": bet_data.get("result", "pending"),
                 "pnl": bet_data.get("pnl", Decimal("0.00")),
+                "rebate": bet_data.get("rebate", Decimal("0.00")),
                 "issue": bet_data.get("issue")
             }
 
@@ -355,15 +357,16 @@ class BetRepository:
             query = text("""
                 INSERT INTO bets (
                     id, user_id, username, chat_id, game_type, lottery_type,
-                    bet_number, bet_amount, odds, status, result,
+                    bet_number, bet_amount, valid_amount, odds, status, result, rebate,
                     issue, bet_details, created_at
                 ) VALUES (
                     :id, :user_id, :username, :chat_id, :game_type, :lottery_type,
-                    :bet_number, :bet_amount, :odds, :status, :result,
+                    :bet_number, :bet_amount, :valid_amount, :odds, :status, :result, :rebate,
                     :issue, :bet_details, NOW()
                 )
             """)
 
+            bet_amount = bet_data["amount"]
             params = {
                 "id": bet_id,
                 "user_id": bet_data["user_id"],
@@ -372,10 +375,12 @@ class BetRepository:
                 "game_type": bet_data.get("game_type", "lucky8"),
                 "lottery_type": bet_data.get("bet_type", "unknown"),
                 "bet_number": bet_data.get("bet_number"),
-                "bet_amount": bet_data["amount"],
+                "bet_amount": bet_amount,
+                "valid_amount": bet_data.get("valid_amount", bet_amount),
                 "odds": bet_data["odds"],
                 "status": "active",
                 "result": bet_data.get("status", "pending"),
+                "rebate": bet_data.get("rebate", Decimal("0.00")),
                 "issue": bet_data.get("draw_issue"),
                 "bet_details": safe_json_dumps(bet_data.get("bet_details")) if bet_data.get("bet_details") else None
             }

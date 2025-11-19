@@ -35,6 +35,7 @@ from biz.roles.repo.subaccount_repo import SubAccountRepository
 from biz.roles.service.subaccount_service import SubAccountService
 from biz.reports.repo.report_repo import ReportRepository
 from biz.reports.service.report_service import ReportService
+from biz.users.service.bot_user_service import BotUserService
 
 # Import external clients
 from external.bot_api_client import BotApiClient
@@ -203,6 +204,12 @@ class Container(containers.DeclarativeContainer):
     report_service = providers.Factory(
         ReportService,
         report_repo=report_repo
+    )
+
+    bot_user_service = providers.Factory(
+        BotUserService,
+        user_repo=user_repo,
+        session_factory=db_session_factory
     )
 
     # ===== External Clients =====

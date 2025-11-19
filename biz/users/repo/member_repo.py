@@ -216,6 +216,54 @@ class MemberRepository:
             await session.commit()
             return int(member_id)
 
+    async def link_bot_user(
+        self,
+        bot_user_id: str,
+        chat_id: str,
+        account: str,
+        password: str,
+        plate: str,
+        superior_account: Optional[str] = None,
+        company_remarks: Optional[str] = None
+    ) -> int:
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        async with self._session_factory() as session:
+            check_account = text("SELECT COUNT(*) FROM member_profiles WHERE account = :account")
+            result = await session.execute(check_account, {"account": account})
+            if result.scalar() > 0:
+                raise ValueError("账号已存在")
+
+            check_user = text("SELECT COUNT(*) FROM users WHERE id = :id AND chat_id = :chat_id")
+            result = await session.execute(check_user, {"id": bot_user_id, "chat_id": chat_id})
+            if result.scalar() == 0:
+                raise ValueError("Bot用户不存在")
+
+            check_linked = text("SELECT COUNT(*) FROM member_profiles WHERE user_id = :user_id")
+            result = await session.execute(check_linked, {"user_id": bot_user_id})
+            if result.scalar() > 0:
+                raise ValueError("该Bot用户已关联member_profiles")
+
+            member_query = text("""
+                INSERT INTO member_profiles (user_id, account, password, plate, superior_account, company_remarks, level, open_time, created_at)
+                VALUES (:user_id, :account, :password, :plate, :superior_account, :company_remarks, 1, NOW(), NOW())
+            """)
+            await session.execute(member_query, {
+                "user_id": bot_user_id,
+                "account": account,
+                "password": hashed_password,
+                "plate": plate,
+                "superior_account": superior_account,
+                "company_remarks": company_remarks
+            })
+            await session.flush()
+
+            member_id_result = await session.execute(text("SELECT LAST_INSERT_ID() AS id"))
+            member_id = member_id_result.scalar()
+
+            await session.commit()
+            return int(member_id)
+
     async def update_member(self, member_id: int, plate: Optional[str] = None, company_remarks: Optional[str] = None) -> bool:
         """
         修改会员 - 只能修改 plate 和 companyRemarks

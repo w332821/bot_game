@@ -171,7 +171,7 @@ from biz.chat.api import chat_api
 from biz.admin.api import admin_api
 from biz.draw.api import draw_api
 from biz.home.api import home_api
-from biz.users.api import members_api, agents_api, rebate_api, personal_api
+from biz.users.api import members_api, agents_api, rebate_api, personal_api, bot_users_api
 from biz.roles.api import role_api, subaccount_api
 from biz.auth.api import auth_api
 from biz.reports.api import report_api
@@ -192,6 +192,7 @@ app.dependency_overrides[role_api.get_role_service] = lambda: container.role_ser
 app.dependency_overrides[subaccount_api.get_subaccount_service] = lambda: container.subaccount_service()
 app.dependency_overrides[auth_api.get_admin_service] = lambda: container.admin_service()
 app.dependency_overrides[report_api.get_report_service] = lambda: container.report_service()
+app.dependency_overrides[bot_users_api.get_bot_user_service] = lambda: container.bot_user_service()
 
 # 注册路由
 app.include_router(webhook_api.router)  # Webhook路由（不使用前缀）
@@ -207,6 +208,7 @@ app.include_router(role_api.router)  # 角色管理API
 app.include_router(subaccount_api.router)  # 子账号管理API
 app.include_router(auth_api.router)  # 认证API
 app.include_router(report_api.router)  # 报表API
+app.include_router(bot_users_api.router)  # Bot用户管理API
 
 # Wire依赖注入
 container.wire(modules=[
@@ -219,6 +221,7 @@ container.wire(modules=[
     "biz.users.api.agents_api",
     "biz.users.api.rebate_api",
     "biz.users.api.personal_api",
+    "biz.users.api.bot_users_api",
     "biz.roles.api.role_api",
     "biz.roles.api.subaccount_api",
     "biz.auth.api.auth_api",

@@ -39,6 +39,21 @@ class MemberService:
         """创建会员"""
         return await self.member_repo.create_member(account, password, plate, superior_account, company_remarks)
 
+    async def link_bot_user(
+        self,
+        bot_user_id: str,
+        chat_id: str,
+        account: str,
+        password: str,
+        plate: str,
+        superior_account: Optional[str] = None,
+        company_remarks: Optional[str] = None
+    ) -> int:
+        """为现有Bot用户创建member_profiles配置"""
+        return await self.member_repo.link_bot_user(
+            bot_user_id, chat_id, account, password, plate, superior_account, company_remarks
+        )
+
     async def update_member(self, member_id: int, plate: Optional[str] = None, company_remarks: Optional[str] = None) -> bool:
         """修改会员"""
         return await self.member_repo.update_member(member_id, plate, company_remarks)

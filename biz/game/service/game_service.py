@@ -162,27 +162,72 @@ class GameService:
                 logger.warning(f"⚠️ 获取期号失败，使用占位符: {str(e)}")
                 current_issue = "待开奖"
 
+            # 计算回水比例（优先级：rebate_settings > users.rebate_ratio > 默认2%）
+            rebate_ratio = Decimal('0.02')  # 默认2%
+
+            # 1. 尝试从rebate_settings读取（游戏级别配置）
+            if user.get('rebate_game_settings'):
+                game_settings = user.get('rebate_game_settings', [])
+                game_name_map = {
+                    'lucky8': '168澳洲幸运8',
+                    'liuhecai': '新奥六合彩'
+                }
+                current_game_name = game_name_map.get(game_type, '168澳洲幸运8')
+
+                for setting in game_settings:
+                    if setting.get('gameName') == current_game_name:
+                        rebate_ratio = Decimal(str(setting.get('rebate', 2))) / Decimal('100')
+                        logger.info(f"📊 使用游戏级回水配置: {current_game_name} = {float(rebate_ratio * 100):.2f}%")
+                        break
+
+            # 2. 如果没有游戏级配置，使用earn_rebate或users.rebate_ratio
+            if rebate_ratio == Decimal('0.02'):  # 如果还是默认值
+                if user.get('earn_rebate'):
+                    rebate_ratio = Decimal(str(user.get('earn_rebate'))) / Decimal('100')
+                    logger.info(f"📊 使用全局回水配置: {float(rebate_ratio * 100):.2f}%")
+                else:
+                    rebate_ratio = user.get('rebate_ratio', Decimal('0.02'))
+                    logger.info(f"📊 使用默认回水配置: {float(rebate_ratio * 100):.2f}%")
+
+            total_rebate = Decimal('0.00')
+
             # 保存下注记录
             bet_ids = []
             for bet in valid_bets:
+                bet_amount = bet['amount']
+                bet_rebate = bet_amount * rebate_ratio
+                total_rebate += bet_rebate
+
                 bet_record = await self.bet_repo.create({
                     'user_id': sender_id,
                     'chat_id': chat_id,
                     'game_type': game_type,
                     'bet_type': bet['type'],
-                    'amount': bet['amount'],  # repo的create方法接受amount参数
+                    'amount': bet_amount,
+                    'valid_amount': bet_amount,
+                    'rebate': bet_rebate,
                     'odds': bet['odds'],
                     'status': 'pending',
-                    'draw_issue': current_issue,  # 使用占位符，开奖时更新
-                    'bet_details': bet  # 保存完整的下注详情
+                    'draw_issue': current_issue,
+                    'bet_details': bet
                 })
                 bet_ids.append(bet_record['id'])
+
+            # 立即发放回水到用户余额
+            if total_rebate > 0:
+                await self.user_repo.add_balance(sender_id, chat_id, total_rebate)
+                logger.info(f"💰 发放回水: 用户={sender_name}, 金额={float(total_rebate):.2f}")
 
             # 生成确认消息
             response = f"📝 下注成功！\n\n"
             response += game_logic.format_bet_summary(valid_bets)
             response += f"\n\n总金额: {float(total_amount):.2f}元"
-            response += f"\n余额: {float(new_balance):.2f}"
+            if total_rebate > 0:
+                response += f"\n回水: {float(total_rebate):.2f}元 ({float(rebate_ratio * 100):.2f}%)"
+                final_balance = new_balance + total_rebate
+                response += f"\n余额: {float(final_balance):.2f}"
+            else:
+                response += f"\n余额: {float(new_balance):.2f}"
             response += f"\n期号: {current_issue}"
 
             await self.bot_client.send_message(chat_id, response)

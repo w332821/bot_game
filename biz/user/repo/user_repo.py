@@ -34,17 +34,36 @@ class UserRepository:
                 user_data["red_packet_settings"] = {}
 
     async def get_user_in_chat(self, user_id: str, chat_id: str) -> Optional[Dict[str, Any]]:
-        """获取用户在特定群的数据"""
+        """获取用户在特定群的数据（支持member_profiles和rebate_settings配置）"""
         async with self._session_factory() as session:
             query = text("""
-                SELECT * FROM users
-                WHERE id = :user_id AND chat_id = :chat_id
+                SELECT
+                    u.*,
+                    mp.plate as member_plate,
+                    mp.superior_account,
+                    mp.level as member_level,
+                    mp.account as member_account,
+                    rs.earn_rebate,
+                    rs.game_settings as rebate_game_settings
+                FROM users u
+                LEFT JOIN member_profiles mp ON mp.user_id = u.id
+                LEFT JOIN rebate_settings rs ON rs.user_id = u.id
+                WHERE u.id = :user_id AND u.chat_id = :chat_id
             """)
             result = await session.execute(query, {"user_id": user_id, "chat_id": chat_id})
             row = result.fetchone()
             if row:
                 data = dict(row._mapping)
                 self._parse_json_fields(data)
+
+                # 解析回水设置
+                if data.get("rebate_game_settings"):
+                    import json
+                    try:
+                        data["rebate_game_settings"] = json.loads(data["rebate_game_settings"])
+                    except:
+                        data["rebate_game_settings"] = None
+
                 return data
             return None
 

@@ -22,6 +22,17 @@ class UpdateMemberRequest(BaseModel):
     plate: Optional[str] = Field(None, pattern="^[ABC]$")
     companyRemarks: Optional[str] = Field(None, max_length=500)
 
+
+class LinkBotUserRequest(BaseModel):
+    botUserId: str = Field(..., description="Bot用户ID（悦聊ObjectId）")
+    chatId: str = Field(..., description="群聊ID")
+    account: str = Field(..., min_length=1, max_length=50, description="登录账号")
+    password: str = Field(..., min_length=6, max_length=20, description="登录密码")
+    plate: str = Field(..., pattern="^[ABC]$", description="盘口")
+    superiorAccount: Optional[str] = Field(None, max_length=50, description="上级账号")
+    companyRemarks: Optional[str] = Field(None, max_length=500, description="公司备注")
+
+
 router = APIRouter(prefix="/api/users/members", tags=["users", "members"]) 
 
 
@@ -115,6 +126,40 @@ async def create_member(
                 biz_code=ErrorCode.ACCOUNT_ALREADY_EXISTS,
                 http_code=200
             )
+        raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
+    except Exception as e:
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
+
+
+@router.post("/link-bot-user", response_class=UnifyResponse)
+async def link_bot_user(
+    request: LinkBotUserRequest = Body(...),
+    current_admin: dict = Depends(get_current_admin),
+    service: MemberService = Depends(get_member_service)
+):
+    try:
+        member_id = await service.link_bot_user(
+            bot_user_id=request.botUserId,
+            chat_id=request.chatId,
+            account=request.account,
+            password=request.password,
+            plate=request.plate,
+            superior_account=request.superiorAccount,
+            company_remarks=request.companyRemarks
+        )
+        return {"id": member_id}
+    except ValueError as e:
+        error_msg = str(e)
+        if "账号已存在" in error_msg:
+            raise UnifyException(
+                get_error_message(ErrorCode.ACCOUNT_ALREADY_EXISTS),
+                biz_code=ErrorCode.ACCOUNT_ALREADY_EXISTS,
+                http_code=200
+            )
+        if "Bot用户不存在" in error_msg:
+            raise UnifyException(error_msg, biz_code=ErrorCode.DATA_NOT_FOUND, http_code=200)
+        if "已关联" in error_msg:
+            raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
         raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
