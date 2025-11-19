@@ -287,7 +287,7 @@ class MemberRepository:
             # Get list
             list_query = text(
                 f"""
-                SELECT bo.id, bo.order_no, bo.bet_type, bo.bet_amount, bo.win_amount,
+                SELECT bo.id, bo.order_no, bo.bet_type, bo.bet_amount, bo.bet_result,
                        bo.status, bo.bet_time, bo.settle_time
                 FROM bet_orders bo
                 JOIN member_profiles mp ON CAST(mp.user_id AS CHAR) = CAST(bo.user_id AS CHAR)
@@ -307,7 +307,7 @@ class MemberRepository:
                     "orderNo": m["order_no"],
                     "betType": m["bet_type"],
                     "betAmount": float(m["bet_amount"]),
-                    "winAmount": float(m["win_amount"]) if m["win_amount"] else 0.0,
+                    "winAmount": float(m["bet_result"]) if m["bet_result"] else 0.0,
                     "status": m["status"],
                     "betTime": str(m["bet_time"]),
                     "settleTime": str(m["settle_time"]) if m["settle_time"] else None
@@ -330,7 +330,7 @@ class MemberRepository:
                 f"""
                 SELECT
                     COALESCE(SUM(bo.bet_amount), 0) AS total_bet,
-                    COALESCE(SUM(bo.win_amount), 0) AS total_win
+                    COALESCE(SUM(bo.bet_result), 0) AS total_win
                 FROM bet_orders bo
                 JOIN member_profiles mp ON CAST(mp.user_id AS CHAR) = CAST(bo.user_id AS CHAR)
                 WHERE {' AND '.join(where)}

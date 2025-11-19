@@ -156,7 +156,7 @@ class TestWinLossReport:
     """测试输赢报表接口"""
 
     @pytest.mark.asyncio
-    async def test_win_loss_report_basic(self):
+    async def test_win_loss_report_basic(self, auth_headers):
         """测试输赢报表基本查询"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -177,7 +177,7 @@ class TestWinLossReport:
             assert "total" in data["data"]
 
     @pytest.mark.asyncio
-    async def test_win_loss_report_with_valid_game_types(self):
+    async def test_win_loss_report_with_valid_game_types(self, auth_headers):
         """测试输赢报表 - 有效的游戏类型(中文)"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -264,7 +264,7 @@ class TestDepositWithdrawalReport:
             assert data["code"] == 200
 
     @pytest.mark.asyncio
-    async def test_deposit_withdrawal_report_deposit_only(self):
+    async def test_deposit_withdrawal_report_deposit_only(self, auth_headers):
         """测试存取款报表 - 仅存款"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -284,7 +284,7 @@ class TestDepositWithdrawalReport:
             assert data["code"] == 200
 
     @pytest.mark.asyncio
-    async def test_deposit_withdrawal_report_withdrawal_only(self):
+    async def test_deposit_withdrawal_report_withdrawal_only(self, auth_headers):
         """测试存取款报表 - 仅取款"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -308,7 +308,7 @@ class TestCategoryReport:
     """测试分类报表接口"""
 
     @pytest.mark.asyncio
-    async def test_category_report_basic(self):
+    async def test_category_report_basic(self, auth_headers):
         """测试分类报表基本查询"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -327,7 +327,7 @@ class TestCategoryReport:
             assert data["code"] == 200
 
     @pytest.mark.asyncio
-    async def test_category_report_with_lottery_type(self):
+    async def test_category_report_with_lottery_type(self, auth_headers):
         """测试分类报表 - 指定彩种"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")
@@ -371,7 +371,7 @@ class TestDownlineDetailsReport:
     """测试下线明细报表接口"""
 
     @pytest.mark.asyncio
-    async def test_downline_details_special_structure(self):
+    async def test_downline_details_special_structure(self, auth_headers):
         """测试下线明细报表 - 特殊结构"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             response = await client.get(
@@ -410,7 +410,7 @@ class TestRecalculateFinancialSummary:
     """测试重新统计财务总报表接口"""
 
     @pytest.mark.asyncio
-    async def test_recalculate_success(self):
+    async def test_recalculate_success(self, auth_headers):
         """测试重新统计成功"""
         async with AsyncClient(app=app, base_url="http://test", headers=auth_headers) as client:
             today = datetime.now().strftime("%Y-%m-%d")

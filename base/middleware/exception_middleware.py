@@ -27,7 +27,7 @@ async def exception_handler(request: Request, exc: Exception):
             "data": exc.exception_kwargs or {}
         }
         return JSONResponse(
-            status_code=200,  # 统一返回200，通过code字段区分业务错误
+            status_code=exc.exception_http_code,
             content=json.loads(json.dumps(content, cls=DecimalEncoder))
         )
 
@@ -47,6 +47,6 @@ async def exception_handler(request: Request, exc: Exception):
         }
     }
     return JSONResponse(
-        status_code=200,  # 统一返回200，通过code字段区分服务器错误
+        status_code=500,
         content=json.loads(json.dumps(content, cls=DecimalEncoder))
     )
