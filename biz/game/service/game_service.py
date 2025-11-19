@@ -162,11 +162,15 @@ class GameService:
                 logger.warning(f"⚠️ 获取期号失败，使用占位符: {str(e)}")
                 current_issue = "待开奖"
 
-            # 计算回水比例（优先级：rebate_settings > users.rebate_ratio > 默认2%）
-            rebate_ratio = Decimal('0.02')  # 默认2%
+            # 计算回水比例（优先级：用户单独配置 > 游戏配置 > 无退水）
+            rebate_ratio = Decimal('0.00')
 
-            # 1. 尝试从rebate_settings读取（游戏级别配置）
-            if user.get('rebate_game_settings'):
+            # 1. 最高优先级：用户单独配置（earn_rebate > 0）
+            if user.get('earn_rebate') and Decimal(str(user.get('earn_rebate'))) > 0:
+                rebate_ratio = Decimal(str(user.get('earn_rebate'))) / Decimal('100')
+                logger.info(f"📊 使用用户退水配置: {float(rebate_ratio * 100):.2f}%")
+            # 2. 次优先级：游戏级别配置
+            elif user.get('rebate_game_settings'):
                 game_settings = user.get('rebate_game_settings', [])
                 game_name_map = {
                     'lucky8': '168澳洲幸运8',
@@ -176,18 +180,13 @@ class GameService:
 
                 for setting in game_settings:
                     if setting.get('gameName') == current_game_name:
-                        rebate_ratio = Decimal(str(setting.get('rebate', 2))) / Decimal('100')
-                        logger.info(f"📊 使用游戏级回水配置: {current_game_name} = {float(rebate_ratio * 100):.2f}%")
+                        rebate_ratio = Decimal(str(setting.get('rebate', 0))) / Decimal('100')
+                        logger.info(f"📊 使用游戏退水配置: {current_game_name} = {float(rebate_ratio * 100):.2f}%")
                         break
 
-            # 2. 如果没有游戏级配置，使用earn_rebate或users.rebate_ratio
-            if rebate_ratio == Decimal('0.02'):  # 如果还是默认值
-                if user.get('earn_rebate'):
-                    rebate_ratio = Decimal(str(user.get('earn_rebate'))) / Decimal('100')
-                    logger.info(f"📊 使用全局回水配置: {float(rebate_ratio * 100):.2f}%")
-                else:
-                    rebate_ratio = user.get('rebate_ratio', Decimal('0.02'))
-                    logger.info(f"📊 使用默认回水配置: {float(rebate_ratio * 100):.2f}%")
+            # 3. 默认：无退水
+            if rebate_ratio == Decimal('0.00'):
+                logger.info(f"📊 未配置退水，退水金额为0")
 
             total_rebate = Decimal('0.00')
 
