@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.security import HTTPBearer
+from fastapi.openapi.models import SecuritySchemeType
 from biz.containers import Container
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
@@ -144,8 +146,38 @@ app = FastAPI(
     title="Game Bot API",
     description="澳洲幸运8/六合彩游戏机器人后端API",
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    swagger_ui_parameters={
+        "persistAuthorization": True
+    }
 )
+
+# 配置 OpenAPI 安全方案
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    from fastapi.openapi.utils import get_openapi
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    openapi_schema["components"]["securitySchemes"] = {
+        "Bearer": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "输入JWT token，格式: Bearer <token>"
+        }
+    }
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # 注册全局异常处理器
 app.add_exception_handler(UnifyException, exception_handler)
