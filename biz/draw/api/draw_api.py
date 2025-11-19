@@ -291,7 +291,7 @@ async def get_lottery_results(
             "pageSize": pageSize
         }
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)
 
 
 @router.get("/lottery/results/{id}", response_class=UnifyResponse)
@@ -328,4 +328,4 @@ async def get_lottery_result_detail(
         }
         return item
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)

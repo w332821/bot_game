@@ -65,7 +65,7 @@ async def get_rebate_settings(
     except UnifyException:
         raise
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/{account}", response_class=UnifyResponse)
@@ -99,4 +99,4 @@ async def update_rebate_settings(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)

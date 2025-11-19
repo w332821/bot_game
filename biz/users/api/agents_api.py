@@ -86,7 +86,7 @@ async def list_agents(
             "pageSize": pageSize
         }
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}", response_class=UnifyResponse)
@@ -100,7 +100,7 @@ async def get_agent_detail(account: str, current_admin: dict = Depends(get_curre
     except UnifyException:
         raise
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/login-log", response_class=UnifyResponse)
@@ -120,7 +120,7 @@ async def get_agent_login_log(
             "pageSize": pageSize
         }
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/members", response_class=UnifyResponse)
@@ -158,7 +158,7 @@ async def get_agent_members(
             "pageSize": pageSize
         }
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.post("", response_class=UnifyResponse)
@@ -192,7 +192,7 @@ async def create_agent(
             raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/{agent_id}", response_class=UnifyResponse)
@@ -225,7 +225,7 @@ async def update_agent(
             raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/transactions", response_class=UnifyResponse)
@@ -256,7 +256,7 @@ async def get_agent_transactions(
             summary=result["summary"]
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/account-changes", response_class=UnifyResponse)
@@ -286,4 +286,4 @@ async def get_agent_account_changes(
             page_size=pageSize
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)

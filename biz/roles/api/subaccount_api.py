@@ -95,7 +95,7 @@ async def get_sub_accounts(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.post("", response_class=UnifyResponse)
@@ -131,7 +131,7 @@ async def create_sub_account(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/{sub_id}", response_class=UnifyResponse)
@@ -161,7 +161,7 @@ async def update_sub_account(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.delete("/{sub_id}", response_class=UnifyResponse)
@@ -185,4 +185,4 @@ async def delete_sub_account(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)

@@ -25,7 +25,7 @@ async def online_count(
         counts = await home_service.get_online_counts(window_minutes=windowMinutes)
         return counts
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)
 
 
 @router.get("/online-trend", response_class=UnifyResponse)
@@ -45,4 +45,4 @@ async def online_trend(
     except UnifyException:
         raise
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)

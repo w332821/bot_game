@@ -469,8 +469,8 @@ class MemberRepository:
             # Get list
             list_query = text(
                 f"""
-                SELECT ac.id, ac.change_type, ac.change_value, ac.balance_before,
-                       ac.balance_after, ac.change_time, ac.operator
+                SELECT ac.id, ac.type, ac.amount, ac.balance_before,
+                       ac.balance_after, ac.created_at, ac.note
                 FROM account_changes ac
                 JOIN member_profiles mp ON CAST(mp.user_id AS CHAR) = CAST(ac.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
@@ -486,12 +486,12 @@ class MemberRepository:
                 m = r._mapping
                 items.append({
                     "id": int(m["id"]),
-                    "changeType": m["change_type"],
-                    "changeValue": float(m["change_value"]),
+                    "changeType": m["type"],
+                    "amount": float(m["amount"]),
                     "balanceBefore": float(m["balance_before"]),
                     "balanceAfter": float(m["balance_after"]),
-                    "changeTime": str(m["change_time"]),
-                    "operator": m["operator"] or ""
+                    "changeTime": str(m["created_at"]),
+                    "note": m["note"] or ""
                 })
 
             # Get total count

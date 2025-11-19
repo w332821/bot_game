@@ -90,7 +90,7 @@ async def get_roles(
             page_size=pageSize
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{role_id}", response_class=UnifyResponse)
@@ -114,7 +114,7 @@ async def get_role_detail(
     except UnifyException:
         raise
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.post("", response_class=UnifyResponse)
@@ -136,7 +136,7 @@ async def create_role(
     except ValueError as e:
         raise UnifyException(str(e), biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/{role_id}", response_class=UnifyResponse)
@@ -167,7 +167,7 @@ async def update_role(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.delete("/{role_id}", response_class=UnifyResponse)
@@ -198,7 +198,7 @@ async def delete_role(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/permissions", response_class=UnifyResponse)
@@ -213,4 +213,4 @@ async def get_permissions_tree(
         tree = service.get_permissions_tree()
         return {"tree": tree}
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)

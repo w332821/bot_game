@@ -55,7 +55,7 @@ async def list_members(
             "pageSize": pageSize
         }
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)
 
 
 @router.get("/{account}", response_class=UnifyResponse)
@@ -68,7 +68,7 @@ async def get_member_detail(account: str, current_admin: dict = Depends(get_curr
     except UnifyException:
         raise
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)
 
 
 @router.get("/{account}/login-log", response_class=UnifyResponse)
@@ -88,7 +88,7 @@ async def get_member_login_log(
             "pageSize": pageSize
         }
     except Exception as e:
-        raise UnifyException(str(e), biz_code=500, http_code=200)
+        raise UnifyException(str(e), biz_code=500, http_code=500)
 
 
 @router.post("", response_class=UnifyResponse)
@@ -117,7 +117,7 @@ async def create_member(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/{member_id}", response_class=UnifyResponse)
@@ -144,7 +144,7 @@ async def update_member(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/bet-orders", response_class=UnifyResponse)
@@ -177,7 +177,7 @@ async def get_member_bet_orders(
             summary=result["summary"]
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/transactions", response_class=UnifyResponse)
@@ -208,7 +208,7 @@ async def get_member_transactions(
             summary=result["summary"]
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/{account}/account-changes", response_class=UnifyResponse)
@@ -238,4 +238,4 @@ async def get_member_account_changes(
             page_size=pageSize
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)

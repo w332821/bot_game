@@ -95,7 +95,7 @@ async def get_basic_info(
     except UnifyException:
         raise
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/basic", response_class=UnifyResponse)
@@ -127,7 +127,7 @@ async def update_basic_info(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.post("/promote/domain", response_class=UnifyResponse)
@@ -158,7 +158,7 @@ async def add_promotion_domain(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/lottery-rebate-config", response_class=UnifyResponse)
@@ -173,7 +173,7 @@ async def get_lottery_rebate_config(
         config = await service.get_lottery_rebate_config(account)
         return {"config": config}
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/lottery-rebate-config", response_class=UnifyResponse)
@@ -201,7 +201,7 @@ async def save_lottery_rebate_config(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.get("/login-log", response_class=UnifyResponse)
@@ -223,7 +223,7 @@ async def get_login_logs(
             page_size=pageSize
         )
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
 @router.put("/password", response_class=UnifyResponse)
@@ -247,12 +247,12 @@ async def update_password(
             # 管理员：使用 username
             account = current_user.get("username")
             if not account:
-                raise UnifyException("无法获取管理员账号", biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+                raise UnifyException("无法获取管理员账号", biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
         elif user_role in ["agent", "member"]:
             # 代理/会员：使用 account
             account = current_user.get("account")
             if not account:
-                raise UnifyException("无法获取用户账号", biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+                raise UnifyException("无法获取用户账号", biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
         else:
             raise UnifyException("未知的用户角色", biz_code=ErrorCode.FORBIDDEN, http_code=200)
 
@@ -280,4 +280,4 @@ async def update_password(
             )
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
     except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=200)
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
