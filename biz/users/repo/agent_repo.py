@@ -552,15 +552,15 @@ class AgentRepository:
         params: Dict[str, Any] = {"account": account, "offset": offset, "limit": page_size}
 
         if change_type:
-            where.append("ac.change_type = :change_type")
+            where.append("ac.type = :change_type")
             params["change_type"] = change_type
 
         if start_date:
-            where.append("ac.change_time >= :start_date")
+            where.append("ac.created_at >= :start_date")
             params["start_date"] = start_date + " 00:00:00"
 
         if end_date:
-            where.append("ac.change_time <= :end_date")
+            where.append("ac.created_at <= :end_date")
             params["end_date"] = end_date + " 23:59:59"
 
         async with self._session_factory() as session:
@@ -572,7 +572,7 @@ class AgentRepository:
                 FROM account_changes ac
                 JOIN agent_profiles ap ON CAST(ap.user_id AS CHAR) = CAST(ac.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
-                ORDER BY ac.change_time DESC
+                ORDER BY ac.created_at DESC
                 LIMIT :limit OFFSET :offset
                 """
             )
