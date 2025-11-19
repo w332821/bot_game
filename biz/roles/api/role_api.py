@@ -93,6 +93,98 @@ async def get_roles(
         raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
+@router.get("/permissions", response_class=UnifyResponse)
+async def get_permissions_tree(
+    current_admin: dict = Depends(get_current_admin)
+):
+    """
+    获取权限树(所有可用权限的树形结构)
+    """
+    tree = [
+        {
+            "id": "personal",
+            "label": "个人管理",
+            "children": [
+                {
+                    "id": "personal-basic",
+                    "label": "基本资料",
+                    "children": [
+                        {"id": "personal-basic-1", "label": "修改代理会员注册默认盘口"},
+                        {"id": "personal-basic-2", "label": "获取代理个人信息"},
+                        {"id": "personal-basic-3", "label": "获取代理盘口信息"},
+                        {"id": "personal-basic-4", "label": "获取代理盘口退水信息"}
+                    ]
+                },
+                {"id": "personal-log", "label": "登录日志"},
+                {
+                    "id": "personal-password",
+                    "label": "修改密码",
+                    "children": [
+                        {"id": "personal-password-1", "label": "保存"}
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "reports",
+            "label": "报表查询",
+            "children": [
+                {"id": "reports-1", "label": "报表查询"},
+                {"id": "reports-summary", "label": "财务总报表"},
+                {"id": "reports-financial", "label": "财务报表"},
+                {"id": "reports-win-loss", "label": "输赢报表"},
+                {"id": "reports-agent-win-loss", "label": "代理输赢报表"},
+                {"id": "reports-deposit-withdrawal", "label": "存取款报表"},
+                {"id": "reports-category", "label": "分类报表"},
+                {"id": "reports-downline-details", "label": "下线明细报表"},
+                {"id": "reports-lottery-types", "label": "彩种列表"}
+            ]
+        },
+        {
+            "id": "lottery",
+            "label": "开奖结果",
+            "children": [
+                {"id": "lottery-1", "label": "开奖结果"}
+            ]
+        },
+        {
+            "id": "users",
+            "label": "用户管理",
+            "children": [
+                {"id": "users-1", "label": "用户管理"},
+                {
+                    "id": "users-members",
+                    "label": "下线会员",
+                    "children": [
+                        {"id": "users-members-add", "label": "新增会员"},
+                        {"id": "users-members-rebate", "label": "会员默认退水"},
+                        {"id": "users-members-view", "label": "查看资料"},
+                        {"id": "users-members-log", "label": "登录日志"},
+                        {"id": "users-members-bets", "label": "查看注单"},
+                        {"id": "users-members-transaction", "label": "交易记录"},
+                        {"id": "users-members-account", "label": "查看帐变"},
+                        {"id": "users-members-plate", "label": "查看盘口"}
+                    ]
+                },
+                {
+                    "id": "users-agents",
+                    "label": "下线代理",
+                    "children": [
+                        {"id": "users-agents-add", "label": "新增代理"},
+                        {"id": "users-agents-rebate", "label": "退水"},
+                        {"id": "users-agents-view", "label": "查看资料"},
+                        {"id": "users-agents-log", "label": "登录日志"},
+                        {"id": "users-agents-transaction", "label": "交易记录"},
+                        {"id": "users-agents-account", "label": "查看帐变"},
+                        {"id": "users-agents-plate", "label": "查看盘口"}
+                    ]
+                }
+            ]
+        }
+    ]
+    return {"tree": tree}
+
+
 @router.get("/{role_id}", response_class=UnifyResponse)
 async def get_role_detail(
     role_id: int,
@@ -201,16 +293,3 @@ async def delete_role(
         raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 
 
-@router.get("/permissions", response_class=UnifyResponse)
-async def get_permissions_tree(
-    current_admin: dict = Depends(get_current_admin),
-    service: RoleService = Depends(get_role_service)
-):
-    """
-    获取权限树(所有可用权限的树形结构)
-    """
-    try:
-        tree = service.get_permissions_tree()
-        return {"tree": tree}
-    except Exception as e:
-        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
