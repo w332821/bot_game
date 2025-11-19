@@ -379,8 +379,8 @@ class MemberRepository:
             # Get list
             list_query = text(
                 f"""
-                SELECT t.id, t.transaction_no, t.transaction_type, t.amount,
-                       t.balance_before, t.balance_after, t.transaction_time, t.remarks
+                SELECT t.id, t.transaction_type, t.amount, t.fee,
+                       t.transaction_time, t.status, t.transaction_info, t.review_comments
                 FROM transactions t
                 JOIN member_profiles mp ON CAST(mp.user_id AS CHAR) = CAST(t.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
@@ -396,13 +396,14 @@ class MemberRepository:
                 m = r._mapping
                 items.append({
                     "id": int(m["id"]),
-                    "transactionNo": m["transaction_no"],
+                    "transactionNo": str(m["id"]),  # 使用id作为交易号
                     "transactionType": m["transaction_type"],
                     "amount": float(m["amount"]),
-                    "balanceBefore": float(m["balance_before"]),
-                    "balanceAfter": float(m["balance_after"]),
+                    "fee": float(m["fee"]) if m["fee"] else 0.0,
+                    "status": m["status"],
                     "transactionTime": str(m["transaction_time"]),
-                    "remarks": m["remarks"] or ""
+                    "transactionInfo": m["transaction_info"] or "",
+                    "remarks": m["review_comments"] or ""
                 })
 
             # Get total count
@@ -468,8 +469,8 @@ class MemberRepository:
             # Get list
             list_query = text(
                 f"""
-                SELECT ac.id, ac.change_type, ac.amount, ac.balance_before,
-                       ac.balance_after, ac.change_time, ac.remarks
+                SELECT ac.id, ac.change_type, ac.change_value, ac.balance_before,
+                       ac.balance_after, ac.change_time, ac.operator
                 FROM account_changes ac
                 JOIN member_profiles mp ON CAST(mp.user_id AS CHAR) = CAST(ac.user_id AS CHAR)
                 WHERE {' AND '.join(where)}
@@ -486,11 +487,11 @@ class MemberRepository:
                 items.append({
                     "id": int(m["id"]),
                     "changeType": m["change_type"],
-                    "amount": float(m["amount"]),
+                    "changeValue": float(m["change_value"]),
                     "balanceBefore": float(m["balance_before"]),
                     "balanceAfter": float(m["balance_after"]),
                     "changeTime": str(m["change_time"]),
-                    "remarks": m["remarks"] or ""
+                    "operator": m["operator"] or ""
                 })
 
             # Get total count
