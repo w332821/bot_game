@@ -115,15 +115,15 @@ class DrawRepository:
     ) -> List[Dict[str, Any]]:
         """获取开奖历史"""
         async with self._session_factory() as session:
+            # 注意: 不过滤chat_id,返回所有聊天群的开奖记录
             query = text("""
                 SELECT * FROM draw_history
-                WHERE game_type = :game_type AND chat_id = :chat_id
+                WHERE game_type = :game_type
                 ORDER BY timestamp DESC
                 LIMIT :limit OFFSET :skip
             """)
             result = await session.execute(query, {
                 "game_type": game_type,
-                "chat_id": chat_id,
                 "skip": skip,
                 "limit": limit
             })
@@ -140,10 +140,11 @@ class DrawRepository:
     ) -> List[Dict[str, Any]]:
         """按日期过滤获取开奖历史 (YYYY-MM-DD)"""
         async with self._session_factory() as session:
+            # 注意: 不过滤chat_id,返回所有聊天群的开奖记录
             query = text(
                 """
                 SELECT * FROM draw_history
-                WHERE game_type = :game_type AND chat_id = :chat_id
+                WHERE game_type = :game_type
                   AND DATE(timestamp) = :lottery_date
                 ORDER BY timestamp DESC
                 LIMIT :limit OFFSET :skip
@@ -151,7 +152,6 @@ class DrawRepository:
             )
             result = await session.execute(query, {
                 "game_type": game_type,
-                "chat_id": chat_id,
                 "lottery_date": date,
                 "skip": skip,
                 "limit": limit
@@ -188,13 +188,13 @@ class DrawRepository:
     ) -> int:
         """统计开奖记录数量"""
         async with self._session_factory() as session:
+            # 注意: 不过滤chat_id,统计所有聊天群的开奖记录
             query = text("""
                 SELECT COUNT(*) as count FROM draw_history
-                WHERE game_type = :game_type AND chat_id = :chat_id
+                WHERE game_type = :game_type
             """)
             result = await session.execute(query, {
-                "game_type": game_type,
-                "chat_id": chat_id
+                "game_type": game_type
             })
             row = result.fetchone()
             return row[0] if row else 0
@@ -207,16 +207,16 @@ class DrawRepository:
     ) -> int:
         """按日期统计开奖记录数量"""
         async with self._session_factory() as session:
+            # 注意: 不过滤chat_id,统计所有聊天群的开奖记录
             query = text(
                 """
                 SELECT COUNT(*) as count FROM draw_history
-                WHERE game_type = :game_type AND chat_id = :chat_id
+                WHERE game_type = :game_type
                   AND DATE(timestamp) = :lottery_date
                 """
             )
             result = await session.execute(query, {
                 "game_type": game_type,
-                "chat_id": chat_id,
                 "lottery_date": date
             })
             row = result.fetchone()
