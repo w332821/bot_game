@@ -36,6 +36,8 @@ from biz.roles.service.subaccount_service import SubAccountService
 from biz.reports.repo.report_repo import ReportRepository
 from biz.reports.service.report_service import ReportService
 from biz.users.service.bot_user_service import BotUserService
+from biz.yueliao.repo.yueliao_user_repo import YueliaoUserRepo
+from biz.yueliao.service.yueliao_user_service import YueliaoUserService
 
 # Import external clients
 from external.bot_api_client import BotApiClient
@@ -210,6 +212,15 @@ class Container(containers.DeclarativeContainer):
         BotUserService,
         user_repo=user_repo,
         session_factory=db_session_factory
+    )
+
+    yueliao_user_repo = providers.Singleton(
+        YueliaoUserRepo
+    )
+
+    yueliao_user_service = providers.Factory(
+        YueliaoUserService,
+        repo=yueliao_user_repo
     )
 
     # ===== External Clients =====

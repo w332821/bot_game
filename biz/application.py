@@ -207,6 +207,7 @@ from biz.users.api import members_api, agents_api, rebate_api, personal_api, bot
 from biz.roles.api import role_api, subaccount_api
 from biz.auth.api import auth_api
 from biz.reports.api import report_api
+from biz.yueliao.api import yueliao_user_api
 
 # 使用FastAPI依赖覆盖机制
 app.dependency_overrides[webhook_api.get_game_service] = lambda: container.game_service()
@@ -241,6 +242,7 @@ app.include_router(subaccount_api.router)  # 子账号管理API
 app.include_router(auth_api.router)  # 认证API
 app.include_router(report_api.router)  # 报表API
 app.include_router(bot_users_api.router)  # Bot用户管理API
+app.include_router(yueliao_user_api.router)  # 悦聊用户管理API
 
 # Wire依赖注入
 container.wire(modules=[
@@ -258,6 +260,7 @@ container.wire(modules=[
     "biz.roles.api.subaccount_api",
     "biz.auth.api.auth_api",
     "biz.reports.api.report_api",
+    "biz.yueliao.api.yueliao_user_api",
 ])
 
 @app.get("/health")
