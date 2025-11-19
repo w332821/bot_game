@@ -46,8 +46,8 @@ class UserRepository:
                     rs.earn_rebate,
                     rs.game_settings as rebate_game_settings
                 FROM users u
-                LEFT JOIN member_profiles mp ON mp.user_id = u.id
-                LEFT JOIN rebate_settings rs ON rs.user_id = u.id
+                LEFT JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci
+                LEFT JOIN rebate_settings rs ON rs.user_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci
                 WHERE u.id = :user_id AND u.chat_id = :chat_id
             """)
             result = await session.execute(query, {"user_id": user_id, "chat_id": chat_id})

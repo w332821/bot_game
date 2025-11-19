@@ -8,7 +8,12 @@
 (asyncmy.errors.OperationalError) (1267, "Illegal mix of collations (utf8mb4_unicode_ci,IMPLICIT) and (utf8mb4_0900_ai_ci,IMPLICIT) for operation '='")
 ```
 
-**根本原因**: 数据库中不同表的`account`字段使用了不同的字符集排序规则(collation),当在SQL查询中跨表比较account字段时,MySQL无法自动转换,导致报错。
+**根本原因**: 数据库中不同表的字段(如`account`和`user_id`)使用了不同的字符集排序规则(collation),当在SQL查询中跨表比较这些字段时,MySQL无法自动转换,导致报错。
+
+### 具体场景
+
+1. **account字段**: `agent_profiles`、`member_profiles`等表的account字段collation不一致
+2. **user_id字段**: `users`表的id字段与`member_profiles`、`rebate_settings`等表的user_id字段collation不一致
 
 ## 修复方案
 
@@ -46,6 +51,12 @@
 6. **biz/auth/api/auth_api.py**
    - `login()` - 修复代理和会员登录的account查询
 
+7. **biz/user/repo/user_repo.py** (新增 2025-11-19)
+   - `get_user_in_chat()` - 修复user_id JOIN查询
+
+8. **biz/users/service/bot_user_service.py** (新增 2025-11-19)
+   - `list_bot_users()` - 修复user_id JOIN查询
+
 ### 方案2: 统一数据库字段的Collation (可选,推荐执行)
 
 创建了migration脚本 `migrations/003_fix_collation.sql`,将所有相关表的account字段统一修改为`utf8mb4_unicode_ci`。
@@ -69,6 +80,8 @@ python migrations/run_migration.py
 
 ### 典型修改示例
 
+#### 示例1: account字段修复
+
 **修改前**:
 ```python
 query = text("""
@@ -91,6 +104,30 @@ query = text("""
     WHERE ap.account COLLATE utf8mb4_unicode_ci = :account
        OR mp.account COLLATE utf8mb4_unicode_ci = :account
     LIMIT 1
+""")
+```
+
+#### 示例2: user_id JOIN修复 (新增 2025-11-19)
+
+**修改前**:
+```python
+query = text("""
+    SELECT u.*, mp.plate
+    FROM users u
+    LEFT JOIN member_profiles mp ON mp.user_id = u.id
+    LEFT JOIN rebate_settings rs ON rs.user_id = u.id
+    WHERE u.id = :user_id AND u.chat_id = :chat_id
+""")
+```
+
+**修改后**:
+```python
+query = text("""
+    SELECT u.*, mp.plate
+    FROM users u
+    LEFT JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci
+    LEFT JOIN rebate_settings rs ON rs.user_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci
+    WHERE u.id = :user_id AND u.chat_id = :chat_id
 """)
 ```
 
@@ -140,7 +177,8 @@ ORDER BY
 
 ## 修复时间
 
-2025-11-18
+- **account字段修复**: 2025-11-18
+- **user_id字段修复**: 2025-11-19
 
 ## 修复人员
 

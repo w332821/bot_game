@@ -174,16 +174,30 @@ class ChatRepository:
         async with self._session_factory() as session:
             if status:
                 query = text("""
-                    SELECT * FROM chats
-                    WHERE status = :status
-                    ORDER BY created_at DESC
+                    SELECT c.*,
+                           COALESCE(u.user_count, 0) as member_count
+                    FROM chats c
+                    LEFT JOIN (
+                        SELECT chat_id, COUNT(*) as user_count
+                        FROM users
+                        GROUP BY chat_id
+                    ) u ON c.id = u.chat_id
+                    WHERE c.status = :status
+                    ORDER BY c.created_at DESC
                     LIMIT :limit OFFSET :skip
                 """)
                 params = {"status": status, "skip": skip, "limit": limit}
             else:
                 query = text("""
-                    SELECT * FROM chats
-                    ORDER BY created_at DESC
+                    SELECT c.*,
+                           COALESCE(u.user_count, 0) as member_count
+                    FROM chats c
+                    LEFT JOIN (
+                        SELECT chat_id, COUNT(*) as user_count
+                        FROM users
+                        GROUP BY chat_id
+                    ) u ON c.id = u.chat_id
+                    ORDER BY c.created_at DESC
                     LIMIT :limit OFFSET :skip
                 """)
                 params = {"skip": skip, "limit": limit}

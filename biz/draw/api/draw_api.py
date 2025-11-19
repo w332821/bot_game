@@ -236,24 +236,30 @@ def _format_time(ts: Any) -> str:
 async def get_lottery_results(
     page: int = Query(1, ge=1),
     pageSize: int = Query(20, ge=1, le=100),
+    type: Optional[str] = Query(None, alias="type"),
+    date: Optional[str] = Query(None, alias="date"),
     lotteryType: Optional[str] = Query(None),
     lotteryDate: Optional[str] = Query(None),
     draw_service: DrawService = Depends(get_draw_service)
 ):
     try:
+        # Support both 'type' and 'lotteryType' parameter names for backwards compatibility
+        lottery_type = type or lotteryType
+        lottery_date = date or lotteryDate
+
         gt = "lucky8"
-        if lotteryType == "新奥六合彩":
+        if lottery_type == "新奥六合彩":
             gt = "liuhecai"
-        elif lotteryType == "168澳洲幸运8":
+        elif lottery_type == "168澳洲幸运8":
             gt = "lucky8"
         skip = (page - 1) * pageSize
-        if lotteryDate:
+        if lottery_date:
             try:
-                datetime.strptime(lotteryDate, "%Y-%m-%d")
+                datetime.strptime(lottery_date, "%Y-%m-%d")
             except Exception:
                 raise UnifyException("日期格式错误，应为 YYYY-MM-DD", biz_code=400, http_code=200)
-            rows = await draw_service.get_draw_history_by_date(gt, "system", lotteryDate, skip, pageSize)
-            total = await draw_service.count_draws_by_date(gt, "system", lotteryDate)
+            rows = await draw_service.get_draw_history_by_date(gt, "system", lottery_date, skip, pageSize)
+            total = await draw_service.count_draws_by_date(gt, "system", lottery_date)
         else:
             rows = await draw_service.get_draw_history(gt, "system", skip, pageSize)
             stats = await draw_service.get_draw_stats(gt, "system")

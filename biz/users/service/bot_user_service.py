@@ -54,7 +54,7 @@ class BotUserService:
                     mp.account as memberAccount,
                     mp.plate as memberPlate
                 FROM users u
-                LEFT JOIN member_profiles mp ON mp.user_id = u.id
+                LEFT JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci
                 WHERE {where_clause}
                 ORDER BY u.created_at DESC
                 LIMIT :page_size OFFSET :offset
@@ -80,7 +80,7 @@ class BotUserService:
             count_query = text(f"""
                 SELECT COUNT(*)
                 FROM users u
-                LEFT JOIN member_profiles mp ON mp.user_id = u.id
+                LEFT JOIN member_profiles mp ON mp.user_id COLLATE utf8mb4_unicode_ci = u.id COLLATE utf8mb4_unicode_ci
                 WHERE {where_clause}
             """)
 
