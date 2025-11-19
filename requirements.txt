@@ -9,6 +9,8 @@ sqlalchemy==2.0.23
 asyncmy==0.2.9
 PyMySQL==1.1.0
 greenlet==3.0.1
+motor==3.7.1
+pymongo==4.15.4
 
 # 依赖注入
 dependency-injector>=4.42.0

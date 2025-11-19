@@ -8,7 +8,7 @@ from base.api import UnifyResponse
 from base.exception import UnifyException
 from base.error_codes import ErrorCode
 
-router = APIRouter(prefix="/admin/yueliao-users", tags=["悦聊用户管理"])
+router = APIRouter(prefix="/api/admin/yueliao-users", tags=["悦聊用户管理"])
 
 
 @router.get("/list", response_class=UnifyResponse)
