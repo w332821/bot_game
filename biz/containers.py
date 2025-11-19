@@ -112,7 +112,7 @@ class Container(containers.DeclarativeContainer):
     chat_service = providers.Factory(
         ChatService,
         chat_repo=chat_repo,
-        scheduler=providers.Callable(lambda: getattr(container, 'scheduler_instance', None))
+        scheduler=None
     )
 
     # 管理员服务
