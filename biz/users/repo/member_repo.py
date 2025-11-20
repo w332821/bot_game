@@ -6,8 +6,9 @@ import bcrypt
 
 
 class MemberRepository:
-    def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession], yueliao_user_repo=None):
         self._session_factory = session_factory
+        self._yueliao_user_repo = yueliao_user_repo
 
     async def list_members(
         self,
@@ -152,69 +153,87 @@ class MemberRepository:
 
     async def create_member(
         self,
-        account: str,
+        phone: str,
         password: str,
+        account: str,
         plate: str,
+        nickname: Optional[str] = None,
         superior_account: Optional[str] = None,
         company_remarks: Optional[str] = None
     ) -> int:
-        """
-        创建会员
-        返回: member_profile_id
-        """
-        # Hash password using bcrypt
+        if self._yueliao_user_repo is None:
+            raise RuntimeError("YueliaoUserRepo 未注入，无法创建悦聊用户")
+
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-        async with self._session_factory() as session:
-            # Check if account already exists
-            check_query = text("SELECT COUNT(*) FROM member_profiles WHERE account = :account")
-            result = await session.execute(check_query, {"account": account})
-            count = result.scalar()
-            if count > 0:
-                raise ValueError("账号已存在")
+        mongo_user_id = None
 
-            # 先创建 users 记录（通用账户数据，不含密码）
-            # 生成唯一的 user_id
-            import uuid
-            user_id = str(uuid.uuid4())
+        try:
+            async with self._session_factory() as session:
+                check_query = text("SELECT COUNT(*) FROM member_profiles WHERE account = :account")
+                result = await session.execute(check_query, {"account": account})
+                count = result.scalar()
+                if count > 0:
+                    raise ValueError("账号已存在")
 
-            user_query = text(
-                """
-                INSERT INTO users (id, username, chat_id, balance, join_date, created_at, updated_at)
-                VALUES (:id, :username, :chat_id, :balance, CURDATE(), NOW(), NOW())
-                """
-            )
-            await session.execute(user_query, {
-                "id": user_id,
-                "username": account,  # 使用账号作为用户名
-                "chat_id": "admin_backend",  # 后台管理账号，标记为特殊 chat_id
-                "balance": Decimal("0.00")
-            })
-            await session.flush()
+                mongo_user_id = await self._yueliao_user_repo.create_yueliao_user(
+                    phone=phone,
+                    password=password,
+                    nickname=nickname
+                )
 
-            # 创建 member profile（扩展信息，包含密码）
-            member_query = text(
-                """
-                INSERT INTO member_profiles (user_id, account, password, plate, superior_account, company_remarks, level, open_time, created_at)
-                VALUES (:user_id, :account, :password, :plate, :superior_account, :company_remarks, 1, NOW(), NOW())
-                """
-            )
-            await session.execute(member_query, {
-                "user_id": user_id,
-                "account": account,
-                "password": hashed_password,
-                "plate": plate,
-                "superior_account": superior_account,
-                "company_remarks": company_remarks
-            })
-            await session.flush()
+                user_query = text(
+                    """
+                    INSERT INTO users (id, username, chat_id, balance, join_date, created_at, updated_at)
+                    VALUES (:id, :username, :chat_id, :balance, CURDATE(), NOW(), NOW())
+                    """
+                )
+                await session.execute(user_query, {
+                    "id": mongo_user_id,
+                    "username": account,
+                    "chat_id": "admin_backend",
+                    "balance": Decimal("0.00")
+                })
+                await session.flush()
 
-            # Get member_profile_id
-            member_id_result = await session.execute(text("SELECT LAST_INSERT_ID() AS id"))
-            member_id = member_id_result.scalar()
+                member_query = text(
+                    """
+                    INSERT INTO member_profiles (user_id, account, password, plate, superior_account, company_remarks, level, open_time, created_at)
+                    VALUES (:user_id, :account, :password, :plate, :superior_account, :company_remarks, 1, NOW(), NOW())
+                    """
+                )
+                await session.execute(member_query, {
+                    "user_id": mongo_user_id,
+                    "account": account,
+                    "password": hashed_password,
+                    "plate": plate,
+                    "superior_account": superior_account,
+                    "company_remarks": company_remarks
+                })
+                await session.flush()
 
-            await session.commit()
-            return int(member_id)
+                member_id_result = await session.execute(text("SELECT LAST_INSERT_ID() AS id"))
+                member_id = member_id_result.scalar()
+
+                await session.commit()
+                return int(member_id)
+
+        except ValueError as e:
+            if mongo_user_id:
+                await self._rollback_mongo_user(mongo_user_id)
+            raise
+
+        except Exception as e:
+            if mongo_user_id:
+                await self._rollback_mongo_user(mongo_user_id)
+            raise RuntimeError(f"创建会员失败: {str(e)}")
+
+    async def _rollback_mongo_user(self, user_id: str):
+        try:
+            from bson import ObjectId
+            await self._yueliao_user_repo.users_collection.delete_one({"_id": ObjectId(user_id)})
+        except Exception:
+            pass
 
     async def link_bot_user(
         self,

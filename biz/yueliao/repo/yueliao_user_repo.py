@@ -1,6 +1,9 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import List, Dict, Optional
 import os
+import bcrypt
+import random
+from datetime import datetime
 
 
 class YueliaoUserRepo:
@@ -102,3 +105,64 @@ class YueliaoUserRepo:
                 user["friends"] = [str(f) for f in user["friends"]]
 
         return user
+
+    async def create_yueliao_user(
+        self,
+        phone: str,
+        password: str,
+        nickname: Optional[str] = None
+    ) -> str:
+        existing_user = await self.users_collection.find_one({"phone": phone})
+        if existing_user:
+            raise ValueError(f"手机号 {phone} 已存在")
+
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        yueliao_id = await self._generate_unique_yueliao_id()
+
+        if nickname is None or nickname.strip() == "":
+            nickname = f"用户{phone[-4:]}"
+
+        avatar_num = random.randint(1, 100)
+        avatar = f"/static/avatars/avatar-{avatar_num:03d}.png"
+
+        now = datetime.utcnow()
+        user_doc = {
+            "phone": phone,
+            "password": hashed_password,
+            "nickname": nickname,
+            "yueliaoId": yueliao_id,
+            "avatar": avatar,
+            "status": "offline",
+            "lastSeen": now,
+            "friends": [],
+            "friendRequests": [],
+            "qrCode": "",
+            "settings": {
+                "language": "zh-cn",
+                "theme": "auto",
+                "notifications": {
+                    "messageSound": True,
+                    "vibrate": True,
+                    "showPreview": True
+                }
+            },
+            "createdAt": now,
+            "updatedAt": now
+        }
+
+        try:
+            result = await self.users_collection.insert_one(user_doc)
+            return str(result.inserted_id)
+        except Exception as e:
+            raise RuntimeError(f"创建悦聊用户失败: {str(e)}")
+
+    async def _generate_unique_yueliao_id(self, max_retries: int = 10) -> str:
+        for _ in range(max_retries):
+            yueliao_id = ''.join([str(random.randint(0, 9)) for _ in range(8)])
+
+            existing = await self.users_collection.find_one({"yueliaoId": yueliao_id})
+            if not existing:
+                return yueliao_id
+
+        raise RuntimeError("无法生成唯一的悦聊ID，请重试")

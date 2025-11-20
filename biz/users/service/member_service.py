@@ -30,14 +30,18 @@ class MemberService:
 
     async def create_member(
         self,
-        account: str,
+        phone: str,
         password: str,
+        account: str,
         plate: str,
+        nickname: Optional[str] = None,
         superior_account: Optional[str] = None,
         company_remarks: Optional[str] = None
     ) -> int:
         """创建会员"""
-        return await self.member_repo.create_member(account, password, plate, superior_account, company_remarks)
+        return await self.member_repo.create_member(
+            phone, password, account, plate, nickname, superior_account, company_remarks
+        )
 
     async def link_bot_user(
         self,

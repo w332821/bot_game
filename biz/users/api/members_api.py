@@ -11,11 +11,13 @@ from biz.auth.dependencies import get_current_admin
 
 
 class CreateMemberRequest(BaseModel):
-    account: str = Field(..., min_length=1, max_length=50)
-    password: str = Field(..., min_length=6, max_length=20)
-    plate: str = Field(..., pattern="^[ABC]$")
-    superiorAccount: Optional[str] = Field(None, max_length=50)
-    companyRemarks: Optional[str] = Field(None, max_length=500)
+    phone: str = Field(..., min_length=11, max_length=11, pattern="^1[3-9]\\d{9}$", description="手机号（11位）")
+    password: str = Field(..., min_length=6, max_length=20, description="登录密码")
+    account: str = Field(..., min_length=1, max_length=50, description="账号")
+    plate: str = Field(..., pattern="^[ABC]$", description="盘口")
+    nickname: Optional[str] = Field(None, max_length=50, description="昵称（可选，默认用手机号后4位）")
+    superiorAccount: Optional[str] = Field(None, max_length=50, description="上级账号")
+    companyRemarks: Optional[str] = Field(None, max_length=500, description="公司备注")
 
 
 class UpdateMemberRequest(BaseModel):
@@ -108,12 +110,14 @@ async def create_member(
     current_admin: dict = Depends(get_current_admin),
     service: MemberService = Depends(get_member_service)
 ):
-    """创建会员"""
+    """创建会员（同时在悦聊和游戏系统创建账号）"""
     try:
         member_id = await service.create_member(
-            account=request.account,
+            phone=request.phone,
             password=request.password,
+            account=request.account,
             plate=request.plate,
+            nickname=request.nickname,
             superior_account=request.superiorAccount,
             company_remarks=request.companyRemarks
         )
@@ -126,7 +130,11 @@ async def create_member(
                 biz_code=ErrorCode.ACCOUNT_ALREADY_EXISTS,
                 http_code=200
             )
+        if "手机号" in error_msg and "已存在" in error_msg:
+            raise UnifyException(error_msg, biz_code=ErrorCode.ACCOUNT_ALREADY_EXISTS, http_code=200)
         raise UnifyException(error_msg, biz_code=ErrorCode.BAD_REQUEST, http_code=200)
+    except RuntimeError as e:
+        raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
     except Exception as e:
         raise UnifyException(str(e), biz_code=ErrorCode.INTERNAL_ERROR, http_code=500)
 

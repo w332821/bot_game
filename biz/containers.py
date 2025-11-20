@@ -138,9 +138,14 @@ class Container(containers.DeclarativeContainer):
         home_repo=home_repo
     )
 
+    yueliao_user_repo = providers.Singleton(
+        YueliaoUserRepo
+    )
+
     member_repo = providers.Factory(
         MemberRepository,
-        session_factory=db_session_factory
+        session_factory=db_session_factory,
+        yueliao_user_repo=yueliao_user_repo
     )
 
     member_service = providers.Factory(
@@ -212,10 +217,6 @@ class Container(containers.DeclarativeContainer):
         BotUserService,
         user_repo=user_repo,
         session_factory=db_session_factory
-    )
-
-    yueliao_user_repo = providers.Singleton(
-        YueliaoUserRepo
     )
 
     yueliao_user_service = providers.Factory(
